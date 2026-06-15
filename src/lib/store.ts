@@ -6,7 +6,7 @@
 // on load, keeps it fresh via realtime, and persists mutations server-side.
 
 import { useSyncExternalStore } from 'react';
-import type { AuditEntry, RoundmarkDB, RoundmarkEvent, Scorecard } from './types';
+import type { AuditEntry, RoundmarkDB, RoundmarkEvent, Scorecard, UserRole } from './types';
 import { buildSeedDB } from './seed';
 import { supabase, isSupabaseConfigured } from './supabase';
 import type { RealtimeChannel } from '@supabase/supabase-js';
@@ -19,6 +19,7 @@ const listeners = new Set<() => void>();
 const loadingListeners = new Set<() => void>();
 
 let currentUserId: string | null = null;
+let currentRole: UserRole = 'organiser';
 let realtimeChannel: RealtimeChannel | null = null;
 
 // ---------------------------------------------------------------------------
@@ -299,22 +300,25 @@ async function loadEventsFromSupabase(userId: string) {
     .eq('owner_id', userId)
     .order('created_at', { ascending: false });
 
-  if (error || !eventRows || eventRows.length === 0) {
-    if (error) console.error('[supabase] load events:', error.message);
+  if (error) {
+    console.error('[supabase] load events:', error.message);
     return;
   }
 
-  const eventIds = eventRows.map((r: Record<string, unknown>) => r.id as string);
+  const rows = (eventRows ?? []) as Record<string, unknown>[];
+  const eventIds = rows.map((r) => r.id as string);
 
-  const [{ data: scRows }, { data: auditRows }] = await Promise.all([
-    supabase.from('scorecards').select('*').in('event_id', eventIds),
-    supabase
-      .from('audit_logs')
-      .select('*')
-      .in('event_id', eventIds)
-      .order('at', { ascending: false })
-      .limit(500),
-  ]);
+  const [{ data: scRows }, { data: auditRows }] = eventIds.length
+    ? await Promise.all([
+        supabase.from('scorecards').select('*').in('event_id', eventIds),
+        supabase
+          .from('audit_logs')
+          .select('*')
+          .in('event_id', eventIds)
+          .order('at', { ascending: false })
+          .limit(500),
+      ])
+    : [{ data: [] }, { data: [] }];
 
   const scByEvent: Record<string, SupabaseScorecardRow[]> = {};
   for (const sc of scRows ?? []) {
@@ -323,7 +327,7 @@ async function loadEventsFromSupabase(userId: string) {
     scByEvent[eid].push(sc as SupabaseScorecardRow);
   }
 
-  const supabaseEvents = (eventRows as Record<string, unknown>[]).map((row) =>
+  const supabaseEvents = rows.map((row) =>
     eventFromRow(row, scByEvent[row.id as string] ?? []),
   );
 
@@ -341,15 +345,23 @@ async function loadEventsFromSupabase(userId: string) {
   }));
 
   mutate((db) => {
-    // Keep demo events (id prefix 'demo-') alongside Supabase events.
-    const demoEvents = db.events.filter((e) => e.id.startsWith('demo-'));
+    // Demo events (id prefix 'demo-') are an admin-only tool. Non-admins only
+    // ever see their own real Supabase events.
     const merged = [...supabaseEvents];
-    for (const de of demoEvents) {
-      if (!merged.some((e) => e.id === de.id)) merged.push(de);
+    if (currentRole === 'admin') {
+      const demoEvents = db.events.filter((e) => e.id.startsWith('demo-'));
+      for (const de of demoEvents) {
+        if (!merged.some((e) => e.id === de.id)) merged.push(de);
+      }
     }
     db.events = merged;
-    // Keep demo audit logs too.
-    const demoAudit = db.auditLogs.filter((a) => !parsedAudit.some((b) => b.id === a.id));
+
+    const demoAudit =
+      currentRole === 'admin'
+        ? db.auditLogs.filter(
+            (a) => a.eventId.startsWith('demo-') && !parsedAudit.some((b) => b.id === a.id),
+          )
+        : [];
     db.auditLogs = [...parsedAudit, ...demoAudit];
   });
 }
@@ -430,8 +442,9 @@ function startRealtime() {
 /** Send a magic-link to `email`. Returns null on success, error message on fail. */
 export async function signIn(email: string): Promise<string | null> {
   if (!isSupabaseConfigured || !supabase) {
-    // Demo fallback: treat any email as "signed in"
-    mutate((db) => { db.session = { organiserName: email }; });
+    // Demo fallback (unconfigured/dev): treat any email as an admin sign-in.
+    currentRole = 'admin';
+    mutate((db) => { db.session = { organiserName: email, role: 'admin' }; });
     return null;
   }
   const { error } = await supabase.auth.signInWithOtp({
@@ -441,9 +454,11 @@ export async function signIn(email: string): Promise<string | null> {
   return error?.message ?? null;
 }
 
-/** One-click demo sign-in (no email, localStorage only). */
+/** One-click demo sign-in (no email, localStorage only — dev/unconfigured mode). */
 export function signInDemo() {
-  mutate((db) => { db.session = { organiserName: 'Demo Organiser' }; });
+  // Demo mode is an admin tool, so the local demo session is treated as admin.
+  currentRole = 'admin';
+  mutate((db) => { db.session = { organiserName: 'Demo Organiser', role: 'admin' }; });
 }
 
 export async function signOut() {
@@ -456,6 +471,28 @@ export async function signOut() {
 export function useSession() {
   const db = useDB();
   return db.session;
+}
+
+/** Current user's role (from the live session). */
+export function useRole(): UserRole | null {
+  const db = useDB();
+  return db.session?.role ?? null;
+}
+
+export function useIsAdmin(): boolean {
+  return useRole() === 'admin';
+}
+
+/** Fetch the signed-in user's role from their profile row. */
+async function fetchRole(userId: string): Promise<UserRole> {
+  if (!supabase) return 'organiser';
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', userId)
+    .single();
+  if (error || !data) return 'organiser';
+  return (data.role as UserRole) ?? 'organiser';
 }
 
 // ---------------------------------------------------------------------------
@@ -476,27 +513,18 @@ export async function initStore() {
       data: { session },
     } = await supabase.auth.getSession();
 
-    if (session) {
-      currentUserId = session.user.id;
-      mutate((db) => {
-        db.session = { organiserName: session.user.email ?? 'Organiser' };
-      });
-      await loadEventsFromSupabase(session.user.id);
-    }
+    if (session) await hydrateUser(session.user.id, session.user.email);
 
     // Realtime works for anonymous visitors too (live leaderboard).
     startRealtime();
 
     supabase.auth.onAuthStateChange(async (event, session) => {
       if (session) {
-        currentUserId = session.user.id;
-        mutate((db) => {
-          db.session = { organiserName: session.user.email ?? 'Organiser' };
-        });
-        await loadEventsFromSupabase(session.user.id);
+        await hydrateUser(session.user.id, session.user.email);
         startRealtime();
       } else if (event === 'SIGNED_OUT') {
         currentUserId = null;
+        currentRole = 'organiser';
         mutate((db) => { db.session = null; });
       }
     });
@@ -504,4 +532,14 @@ export async function initStore() {
     storeLoading = false;
     emitLoading();
   }
+}
+
+/** Set up the signed-in user: resolve role, set session, load their events. */
+async function hydrateUser(userId: string, email: string | undefined) {
+  currentUserId = userId;
+  currentRole = await fetchRole(userId);
+  mutate((db) => {
+    db.session = { organiserName: email ?? 'Organiser', role: currentRole };
+  });
+  await loadEventsFromSupabase(userId);
 }

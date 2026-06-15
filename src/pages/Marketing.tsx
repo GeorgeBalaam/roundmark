@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { MarketingHeader } from '../components/shells';
 import { Badge, Button, Card, Logo } from '../components/ui';
 import { signInDemo, useDB } from '../lib/store';
+import { isSupabaseConfigured } from '../lib/supabase';
 
 const BENEFITS = [
   {
@@ -154,9 +155,20 @@ export default function MarketingPage() {
   const navigate = useNavigate();
   const db = useDB();
 
-  function createDemo() {
-    if (!db.session) signInDemo();
-    navigate('/app');
+  // With a real backend, demo events are an admin-only tool — send visitors to
+  // sign in (admins get the demo in their dashboard). In local/unconfigured
+  // mode there's no auth, so the one-click demo bypass stays for convenience.
+  const ctaLabel = isSupabaseConfigured ? 'Get started' : 'Create demo event';
+
+  function handleCta() {
+    if (db.session) {
+      navigate('/app');
+    } else if (isSupabaseConfigured) {
+      navigate('/login');
+    } else {
+      signInDemo();
+      navigate('/app');
+    }
   }
 
   return (
@@ -175,8 +187,8 @@ export default function MarketingPage() {
               leaderboard and save the final results.
             </p>
             <div className="row" style={{ justifyContent: 'center', flexWrap: 'wrap' }}>
-              <Button size="lg" onClick={createDemo}>
-                Create demo event
+              <Button size="lg" onClick={handleCta}>
+                {ctaLabel}
               </Button>
               <Button size="lg" variant="secondary" to="/leaderboard/demo-live">
                 View sample leaderboard
@@ -277,8 +289,8 @@ export default function MarketingPage() {
                       </li>
                     ))}
                   </ul>
-                  <Button block variant={p.highlighted ? 'primary' : 'secondary'} onClick={createDemo}>
-                    Start with a demo
+                  <Button block variant={p.highlighted ? 'primary' : 'secondary'} onClick={handleCta}>
+                    {isSupabaseConfigured ? 'Get started' : 'Start with a demo'}
                   </Button>
                   {/* TODO(production): wire to Stripe checkout */}
                 </Card>
@@ -295,8 +307,8 @@ export default function MarketingPage() {
             scan a scorecard, enter a score and watch it move.
           </p>
           <div className="row" style={{ justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Button size="lg" onClick={createDemo}>
-              Create demo event
+            <Button size="lg" onClick={handleCta}>
+              {ctaLabel}
             </Button>
             <Button size="lg" variant="ghost" to="/tv/demo-live">
               See TV mode
