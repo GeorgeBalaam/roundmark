@@ -108,19 +108,6 @@ export default function LoginPage() {
                 {busy ? 'Sending…' : 'Send magic link'}
               </Button>
             </form>
-            <div
-              style={{
-                borderTop: '1px solid var(--rm-border)',
-                paddingTop: 'var(--space-4)',
-              }}
-            >
-              <p className="text-muted" style={{ fontSize: '0.8rem', marginBottom: 'var(--space-3)' }}>
-                Just exploring? Try the demo.
-              </p>
-              <Button variant="ghost" block onClick={enterDemo}>
-                Enter demo mode
-              </Button>
-            </div>
             <Button variant="ghost" block to="/">
               Back to homepage
             </Button>

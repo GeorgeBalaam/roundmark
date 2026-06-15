@@ -4,6 +4,9 @@
 // events, holes, players, teams, team_players, scores, sponsors, audit_logs.
 // TODO(production): replace localStorage store with Supabase + RLS policies.
 
+/** Roundmark account roles. Only admins can use demo events/mode. */
+export type UserRole = 'admin' | 'organiser' | 'player';
+
 export type ScoringFormat = 'stroke' | 'stableford' | 'scramble';
 
 export type EventStatus = 'draft' | 'ready' | 'live' | 'completed';
@@ -116,8 +119,8 @@ export interface RoundmarkDB {
   version: number;
   events: RoundmarkEvent[];
   auditLogs: AuditEntry[];
-  /** Demo organiser session flag. TODO(production): real auth. */
-  session: { organiserName: string } | null;
+  /** Signed-in user. role drives which dashboard + features they get. */
+  session: { organiserName: string; role: UserRole } | null;
 }
 
 export const EVENT_TYPE_LABELS: Record<EventType, string> = {
