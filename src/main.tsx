@@ -13,6 +13,7 @@ import HistoryPage from './pages/History';
 import EventSetupPage from './pages/EventSetup';
 import ConsolePage from './pages/Console';
 import ScorecardPage from './pages/Scorecard';
+import EventLandingPage from './pages/EventLanding';
 import LeaderboardPage from './pages/Leaderboard';
 import TVPage from './pages/TV';
 import ResultsPage from './pages/Results';
@@ -54,6 +55,7 @@ const router = createBrowserRouter([
     ),
   },
   { path: '/score/:eventId/:teamId', element: <ScorecardPage /> },
+  { path: '/e/:eventId', element: <EventLandingPage /> },
   { path: '/leaderboard/:eventId', element: <LeaderboardPage /> },
   { path: '/tv/:eventId', element: <TVPage /> },
   { path: '/results/:eventId', element: <ResultsPage /> },

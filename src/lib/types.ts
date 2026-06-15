@@ -80,6 +80,59 @@ export interface AuditEntry {
   newValue?: string;
 }
 
+export type RegistrationStatus = 'pending' | 'approved' | 'declined' | 'waitlist';
+
+/** Optional registration fields the organiser can choose to capture. */
+export type RegistrationFieldKey = 'company' | 'handicap' | 'dietary' | 'phone';
+
+export interface RegistrationFieldConfig {
+  key: RegistrationFieldKey;
+  show: boolean;
+  required: boolean;
+}
+
+export interface RegistrationSettings {
+  /** When true, the public landing page accepts new sign-ups. */
+  open: boolean;
+  /** Auto-approve sign-ups (still creates players) vs. manual approval. */
+  autoApprove: boolean;
+  /** Optional welcome/instructions shown on the landing page. */
+  note?: string;
+  /** Which optional fields to show and which are required. */
+  fields: RegistrationFieldConfig[];
+}
+
+export const DEFAULT_REGISTRATION_FIELDS: RegistrationFieldConfig[] = [
+  { key: 'company', show: true, required: false },
+  { key: 'handicap', show: true, required: false },
+  { key: 'dietary', show: true, required: false },
+  { key: 'phone', show: false, required: false },
+];
+
+export const REGISTRATION_FIELD_LABELS: Record<RegistrationFieldKey, string> = {
+  company: 'Company',
+  handicap: 'Handicap',
+  dietary: 'Dietary requirements',
+  phone: 'Phone number',
+};
+
+export interface Registration {
+  id: string;
+  eventId: string;
+  status: RegistrationStatus;
+  firstName: string;
+  lastName: string;
+  email: string;
+  company?: string;
+  handicap?: number | null;
+  dietary?: string;
+  phone?: string;
+  notes?: string;
+  /** Set when approved — the roster Player created from this sign-up. */
+  playerId?: string;
+  createdAt: string;
+}
+
 export interface SideCompetitions {
   nearestPinWinner?: string;
   nearestPinHole?: number;
@@ -104,6 +157,8 @@ export interface RoundmarkEvent {
   charityName?: string;
   charityUrl?: string;
   status: EventStatus;
+  /** Public registration config (landing page sign-ups). */
+  registration?: RegistrationSettings;
   /** When locked, scorers can no longer edit. Admin can still override. */
   locked: boolean;
   /** Admin can pause scoring without locking results. */
@@ -124,6 +179,8 @@ export interface RoundmarkDB {
   version: number;
   events: RoundmarkEvent[];
   auditLogs: AuditEntry[];
+  /** Event sign-ups (separate from players — see RegistrationStatus). */
+  registrations: Registration[];
   /** Signed-in user. role drives which dashboard + features they get. */
   session: { organiserName: string; role: UserRole } | null;
 }

@@ -1,8 +1,26 @@
 // Event-level operations: create, duplicate, team auto-balance, lock/unlock.
 
 import type { Player, RoundmarkEvent, Scorecard, Team } from './types';
-import { addAudit, deleteEventFromSupabase, makeId, mutate, syncEvent } from './store';
+import { DEFAULT_REGISTRATION_FIELDS } from './types';
+import {
+  addAudit,
+  deleteEventFromSupabase,
+  getDB,
+  makeId,
+  mutate,
+  syncEvent,
+  syncRegistration,
+  updateEvent,
+} from './store';
 import { PAR_72_TEMPLATE } from './seed';
+
+function defaultRegistration() {
+  return {
+    open: false,
+    autoApprove: false,
+    fields: DEFAULT_REGISTRATION_FIELDS.map((f) => ({ ...f })),
+  };
+}
 
 export function emptyScorecard(team: Team, holeCount: number): Scorecard {
   const playerScores: Scorecard['playerScores'] = {};
@@ -53,6 +71,7 @@ export function createEvent(partial?: Partial<RoundmarkEvent>): RoundmarkEvent {
     brandColor: '#27542A',
     accentColor: '#8DB259',
     bgColor: '#F7F3EA',
+    registration: defaultRegistration(),
     status: 'draft',
     locked: false,
     scoringPaused: false,
@@ -86,6 +105,9 @@ export function duplicateEvent(source: RoundmarkEvent, includePlayers: boolean):
     brandColor: source.brandColor,
     accentColor: source.accentColor,
     bgColor: source.bgColor,
+    registration: source.registration
+      ? { ...source.registration, open: false, fields: source.registration.fields.map((f) => ({ ...f })) }
+      : defaultRegistration(),
     logoUrl: source.logoUrl,
     charityName: source.charityName,
     charityUrl: source.charityUrl,
@@ -192,6 +214,61 @@ export function unlockResults(eventId: string, by: string) {
     event.updatedAt = new Date().toISOString();
   });
   addAudit({ eventId, by, action: 'Results unlocked (admin override)' });
+}
+
+// --- Registrations -------------------------------------------------------
+
+/**
+ * Approve a sign-up: add it to the event roster as a Player and link them.
+ * Team assignment happens separately (auto-balance or manual).
+ */
+export function approveRegistration(registrationId: string, by: string) {
+  const reg = getDB().registrations.find((r) => r.id === registrationId);
+  if (!reg || reg.status === 'approved') return;
+  const name = `${reg.firstName} ${reg.lastName}`;
+  const playerId = makeId();
+  const player: Player = {
+    id: playerId,
+    firstName: reg.firstName,
+    lastName: reg.lastName,
+    email: reg.email || undefined,
+    company: reg.company || undefined,
+    handicap: reg.handicap ?? null,
+    dietary: reg.dietary || undefined,
+    role: 'guest',
+  };
+
+  // Add the roster player (updateEvent also syncs the event to Supabase).
+  updateEvent(reg.eventId, (e) => {
+    e.players.push(player);
+  });
+  mutate((db) => {
+    const r = db.registrations.find((x) => x.id === registrationId);
+    if (r) {
+      r.status = 'approved';
+      r.playerId = playerId;
+    }
+  });
+
+  addAudit({ eventId: reg.eventId, by, action: `Registration approved — ${name} added to roster` });
+  const updated = getDB().registrations.find((r) => r.id === registrationId);
+  if (updated) void syncRegistration(updated);
+}
+
+export function declineRegistration(registrationId: string, by: string) {
+  const reg = getDB().registrations.find((r) => r.id === registrationId);
+  if (!reg) return;
+  const name = `${reg.firstName} ${reg.lastName}`;
+  mutate((db) => {
+    const r = db.registrations.find((x) => x.id === registrationId);
+    if (r) {
+      r.status = 'declined';
+      r.playerId = undefined;
+    }
+  });
+  addAudit({ eventId: reg.eventId, by, action: `Registration declined — ${name}` });
+  const updated = getDB().registrations.find((r) => r.id === registrationId);
+  if (updated) void syncRegistration(updated);
 }
 
 /** Readiness checklist used by the wizard review step and dashboard. */

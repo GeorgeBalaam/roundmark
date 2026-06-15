@@ -4,11 +4,13 @@
 import type {
   Hole,
   Player,
+  Registration,
   RoundmarkDB,
   RoundmarkEvent,
   Scorecard,
   Team,
 } from './types';
+import { DEFAULT_REGISTRATION_FIELDS } from './types';
 
 /** Standard par-72: front 36 / back 36. */
 export const PAR_72_TEMPLATE: Hole[] = [
@@ -166,6 +168,14 @@ export function buildSeedDB(): RoundmarkDB {
     type: 'company',
     format: 'stableford',
     brandColor: '#27542A',
+    accentColor: '#8DB259',
+    bgColor: '#F7F3EA',
+    registration: {
+      open: true,
+      autoApprove: false,
+      note: 'Join us for our annual company golf day at Demo Fairway. Register below and we’ll confirm your place.',
+      fields: DEFAULT_REGISTRATION_FIELDS.map((f) => ({ ...f })),
+    },
     status: 'live',
     locked: false,
     scoringPaused: false,
@@ -225,6 +235,27 @@ export function buildSeedDB(): RoundmarkDB {
     lockedAt: lastMonth,
   };
 
+  const demoRegistrations: Registration[] = [
+    {
+      id: 'reg-1', eventId: 'demo-live', status: 'pending',
+      firstName: 'Olivia', lastName: 'Hartley', email: 'olivia.hartley@example.com',
+      company: 'Brightline', handicap: 14, dietary: 'Vegetarian',
+      createdAt: new Date(now.getTime() - 3600_000).toISOString(),
+    },
+    {
+      id: 'reg-2', eventId: 'demo-live', status: 'pending',
+      firstName: 'Daniel', lastName: 'Okafor', email: 'daniel.okafor@example.com',
+      company: 'Atlas Partners', handicap: 8,
+      createdAt: new Date(now.getTime() - 7200_000).toISOString(),
+    },
+    {
+      id: 'reg-3', eventId: 'demo-live', status: 'pending',
+      firstName: 'Sophie', lastName: 'Renwick', email: 'sophie.renwick@example.com',
+      company: 'Northbeam Ltd', handicap: 22, dietary: 'Gluten-free',
+      createdAt: new Date(now.getTime() - 10800_000).toISOString(),
+    },
+  ];
+
   return {
     version: 1,
     events: [liveEvent, doneEvent],
@@ -237,6 +268,7 @@ export function buildSeedDB(): RoundmarkDB {
         action: 'Results locked',
       },
     ],
+    registrations: demoRegistrations,
     session: null,
   };
 }
