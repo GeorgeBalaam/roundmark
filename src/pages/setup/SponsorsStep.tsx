@@ -1,6 +1,7 @@
 // Wizard step 5: sponsor slots (up to 6).
 
 import { Button, Card, EmptyState, FormField, SponsorStrip } from '../../components/ui';
+import { ImageUpload } from '../../components/ImageUpload';
 import { useToast } from '../../components/toast-context';
 import { makeId, updateEvent } from '../../lib/store';
 import type { RoundmarkEvent, Sponsor } from '../../lib/types';
@@ -89,11 +90,11 @@ export default function SponsorsStep({ event }: { event: RoundmarkEvent }) {
                     />
                   </div>
                   <div className="grow" style={{ minWidth: 180 }}>
-                    <FormField
-                      label="Logo URL"
-                      placeholder="https://… (optional)"
-                      value={s.logoUrl ?? ''}
-                      onChange={(e) => patchSponsor(s.id, { logoUrl: e.target.value || undefined })}
+                    <ImageUpload
+                      label="Logo"
+                      value={s.logoUrl}
+                      onChange={(url) => patchSponsor(s.id, { logoUrl: url })}
+                      pathPrefix={`${event.id}/sponsors`}
                     />
                   </div>
                   <div className="grow" style={{ minWidth: 180 }}>

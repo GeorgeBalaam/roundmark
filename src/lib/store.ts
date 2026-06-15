@@ -56,6 +56,8 @@ function eventFromRow(
     type: (row.type as RoundmarkEvent['type']) ?? 'company',
     format: (row.format as RoundmarkEvent['format']) ?? 'stableford',
     brandColor: (row.brand_color as string) ?? '#27542A',
+    accentColor: (row.accent_color as string | null) ?? undefined,
+    bgColor: (row.bg_color as string | null) ?? undefined,
     logoUrl: (row.logo_url as string | null) ?? undefined,
     charityName: (row.charity_name as string | null) ?? undefined,
     charityUrl: (row.charity_url as string | null) ?? undefined,
@@ -89,6 +91,8 @@ function rowFromEvent(
     type: event.type,
     format: event.format,
     brand_color: event.brandColor ?? '#27542A',
+    accent_color: event.accentColor ?? null,
+    bg_color: event.bgColor ?? null,
     logo_url: event.logoUrl ?? null,
     charity_name: event.charityName ?? null,
     charity_url: event.charityUrl ?? null,
@@ -240,6 +244,8 @@ export function resetDemoData() {
 
 async function syncEventToSupabase(event: RoundmarkEvent) {
   if (!isSupabaseConfigured || !supabase) return;
+  // Demo events (demo-* ids) live only in localStorage — never push them.
+  if (event.id.startsWith('demo-')) return;
 
   // Only the owner can write the event config row.
   if (currentUserId) {
@@ -260,6 +266,7 @@ async function syncEventToSupabase(event: RoundmarkEvent) {
 
 async function syncAuditToSupabase(entry: AuditEntry) {
   if (!isSupabaseConfigured || !supabase) return;
+  if (entry.eventId.startsWith('demo-')) return;
   const { error } = await supabase.from('audit_logs').insert({
     event_id: entry.eventId,
     at: entry.at,
@@ -283,6 +290,7 @@ export function syncEvent(eventId: string) {
 /** Called from events.ts after deleteEvent to remove from Supabase. */
 export async function deleteEventFromSupabase(eventId: string) {
   if (!isSupabaseConfigured || !supabase || !currentUserId) return;
+  if (eventId.startsWith('demo-')) return;
   const { error } = await supabase.from('events').delete().eq('id', eventId);
   if (error) console.error('[supabase] event delete:', error.message);
 }

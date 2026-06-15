@@ -94,7 +94,12 @@ export interface RoundmarkEvent {
   venue: string;
   type: EventType;
   format: ScoringFormat;
+  /** Primary brand colour — headers and primary buttons on public pages. */
   brandColor?: string;
+  /** Accent colour — highlights, score figures, live badges. */
+  accentColor?: string;
+  /** Page background colour for public pages. */
+  bgColor?: string;
   logoUrl?: string;
   charityName?: string;
   charityUrl?: string;
