@@ -1,7 +1,7 @@
 // Event-level operations: create, duplicate, team auto-balance, lock/unlock.
 
 import type { Player, RoundmarkEvent, Scorecard, Team } from './types';
-import { addAudit, makeId, mutate } from './store';
+import { addAudit, deleteEventFromSupabase, makeId, mutate, syncEvent } from './store';
 import { PAR_72_TEMPLATE } from './seed';
 
 export function emptyScorecard(team: Team, holeCount: number): Scorecard {
@@ -67,6 +67,7 @@ export function createEvent(partial?: Partial<RoundmarkEvent>): RoundmarkEvent {
   mutate((db) => {
     db.events.unshift(event);
   });
+  syncEvent(event.id);
   return event;
 }
 
@@ -99,6 +100,7 @@ export function duplicateEvent(source: RoundmarkEvent, includePlayers: boolean):
   mutate((db) => {
     db.events.unshift(copy);
   });
+  syncEvent(copy.id);
   return copy;
 }
 
@@ -107,6 +109,7 @@ export function deleteEvent(eventId: string) {
     db.events = db.events.filter((e) => e.id !== eventId);
     db.auditLogs = db.auditLogs.filter((a) => a.eventId !== eventId);
   });
+  void deleteEventFromSupabase(eventId);
 }
 
 const DEFAULT_TEAM_NAMES = [

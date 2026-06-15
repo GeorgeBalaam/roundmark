@@ -1,18 +1,23 @@
 // Shareable final results page — public, printable, exportable.
 
+import { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { IndividualStandingsTable, LeaderboardTable } from '../components/leaderboard';
 import { Badge, Button, Card, Logo, ProvisionalBadge, SponsorStrip } from '../components/ui';
 import { useToast } from '../components/toast-context';
 import { buildResultsCSV, downloadCSV } from '../lib/csv';
 import { computeTeamStandings } from '../lib/scoring';
-import { useEvent } from '../lib/store';
+import { fetchEventIfMissing, useEvent } from '../lib/store';
 import { FORMAT_LABELS } from '../lib/types';
 
 export default function ResultsPage() {
   const { eventId } = useParams();
   const event = useEvent(eventId);
   const toast = useToast();
+
+  useEffect(() => {
+    if (!event && eventId) void fetchEventIfMissing(eventId);
+  }, [event, eventId]);
 
   if (!event) {
     return (
