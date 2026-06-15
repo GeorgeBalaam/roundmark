@@ -1,10 +1,8 @@
-// Demo organiser access. Deliberately lightweight: the priority is getting
-// into the dashboard to test flows. TODO(production): real auth (Supabase Auth).
-
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { signInDemo, useSession } from '../lib/store';
-import { Button, Card, Logo } from '../components/ui';
+import { signIn, signInDemo, useSession } from '../lib/store';
+import { isSupabaseConfigured } from '../lib/supabase';
+import { Button, Card, FieldWrap, Logo } from '../components/ui';
 
 export function RequireSession({ children }: { children: ReactNode }) {
   const session = useSession();
@@ -15,8 +13,26 @@ export function RequireSession({ children }: { children: ReactNode }) {
 export default function LoginPage() {
   const navigate = useNavigate();
   const session = useSession();
+  const [email, setEmail] = useState('');
+  const [sent, setSent] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   if (session) return <Navigate to="/app" replace />;
+
+  async function handleMagicLink(e: React.FormEvent) {
+    e.preventDefault();
+    if (!email.trim()) return;
+    setBusy(true);
+    setError(null);
+    const err = await signIn(email.trim());
+    setBusy(false);
+    if (err) {
+      setError(err);
+    } else {
+      setSent(true);
+    }
+  }
 
   function enterDemo() {
     signInDemo();
@@ -37,19 +53,94 @@ export default function LoginPage() {
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 'var(--space-6)' }}>
           <Logo variant="stacked" height={110} />
         </div>
-        <h2 style={{ marginBottom: 8 }}>Organiser access</h2>
-        <p className="text-muted" style={{ marginBottom: 'var(--space-8)' }}>
-          Roundmark is in demo mode. Enter the organiser dashboard to create
-          events, build teams and run a live golf day — no account needed yet.
-        </p>
-        <div className="stack-4">
-          <Button size="lg" block onClick={enterDemo}>
-            Enter demo organiser mode
-          </Button>
-          <Button variant="ghost" block to="/">
-            Back to homepage
-          </Button>
-        </div>
+
+        {sent ? (
+          <div className="stack-4">
+            <div
+              style={{
+                background: 'var(--rm-surface-raised)',
+                borderRadius: 'var(--radius-md)',
+                padding: 'var(--space-5)',
+              }}
+            >
+              <div style={{ fontSize: '2rem', marginBottom: 8 }}>📬</div>
+              <h3 style={{ marginBottom: 8 }}>Check your email</h3>
+              <p className="text-muted" style={{ fontSize: '0.9rem' }}>
+                We sent a sign-in link to <strong>{email}</strong>. Click it to
+                open your organiser dashboard — no password needed.
+              </p>
+            </div>
+            <Button variant="ghost" block onClick={() => setSent(false)}>
+              Use a different email
+            </Button>
+            <Button variant="ghost" block to="/">
+              Back to homepage
+            </Button>
+          </div>
+        ) : isSupabaseConfigured ? (
+          <div className="stack-4">
+            <div>
+              <h2 style={{ marginBottom: 8 }}>Organiser sign in</h2>
+              <p className="text-muted" style={{ marginBottom: 'var(--space-6)' }}>
+                Enter your email and we'll send a magic sign-in link — no
+                password required.
+              </p>
+            </div>
+            <form onSubmit={handleMagicLink} className="stack-4">
+              <FieldWrap label="Email address" htmlFor="login-email">
+                <input
+                  id="login-email"
+                  className="input"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="you@company.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </FieldWrap>
+              {error && (
+                <p style={{ color: 'var(--rm-live)', fontSize: '0.875rem', textAlign: 'left' }}>
+                  {error}
+                </p>
+              )}
+              <Button type="submit" size="lg" block disabled={busy || !email.trim()}>
+                {busy ? 'Sending…' : 'Send magic link'}
+              </Button>
+            </form>
+            <div
+              style={{
+                borderTop: '1px solid var(--rm-border)',
+                paddingTop: 'var(--space-4)',
+              }}
+            >
+              <p className="text-muted" style={{ fontSize: '0.8rem', marginBottom: 'var(--space-3)' }}>
+                Just exploring? Try the demo.
+              </p>
+              <Button variant="ghost" block onClick={enterDemo}>
+                Enter demo mode
+              </Button>
+            </div>
+            <Button variant="ghost" block to="/">
+              Back to homepage
+            </Button>
+          </div>
+        ) : (
+          /* Supabase not configured — demo-only mode */
+          <div className="stack-4">
+            <h2 style={{ marginBottom: 8 }}>Organiser access</h2>
+            <p className="text-muted" style={{ marginBottom: 'var(--space-8)' }}>
+              Roundmark is in demo mode. Enter the organiser dashboard to create
+              events, build teams and run a live golf day — no account needed yet.
+            </p>
+            <Button size="lg" block onClick={enterDemo}>
+              Enter demo organiser mode
+            </Button>
+            <Button variant="ghost" block to="/">
+              Back to homepage
+            </Button>
+          </div>
+        )}
       </Card>
     </div>
   );

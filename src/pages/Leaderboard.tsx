@@ -7,13 +7,17 @@ import { Link, useParams } from 'react-router-dom';
 import { IndividualStandingsTable, LeaderboardTable } from '../components/leaderboard';
 import { Badge, Button, Logo, ProvisionalBadge, SponsorStrip } from '../components/ui';
 import { eventProgress } from '../lib/scoring';
-import { useEvent } from '../lib/store';
+import { fetchEventIfMissing, useEvent } from '../lib/store';
 import { FORMAT_LABELS } from '../lib/types';
 
 export default function LeaderboardPage() {
   const { eventId } = useParams();
   const event = useEvent(eventId);
   const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    if (!event && eventId) void fetchEventIfMissing(eventId);
+  }, [event, eventId]);
 
   // Poll every 15s so "last updated" stays honest even with no interaction.
   useEffect(() => {

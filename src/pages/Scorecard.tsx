@@ -1,12 +1,12 @@
 // Player/scorer mobile scorecard. The most important player-facing screen:
 // no login, large tap targets, one hole at a time, obvious save state.
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Badge, Button, ConfirmDialog, Logo, SponsorStrip } from '../components/ui';
 import { useToast } from '../components/toast-context';
 import { stablefordPoints } from '../lib/scoring';
-import { updateEvent, useEvent } from '../lib/store';
+import { fetchEventIfMissing, updateEvent, useEvent } from '../lib/store';
 import type { RoundmarkEvent, ScoreCell, Team } from '../lib/types';
 import { FORMAT_LABELS } from '../lib/types';
 
@@ -96,6 +96,11 @@ export default function ScorecardPage() {
   const event = useEvent(eventId);
   const team = event?.teams.find((t) => t.id === teamId);
   const toast = useToast();
+
+  // If the event isn't in the local cache (scorer on a different device), fetch from Supabase.
+  useEffect(() => {
+    if (!event && eventId) void fetchEventIfMissing(eventId);
+  }, [event, eventId]);
 
   const order = useMemo(() => (event && team ? playOrder(event, team) : []), [event, team]);
   const card = event && team ? event.scorecards[team.id] : undefined;

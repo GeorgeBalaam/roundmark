@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Logo, ProvisionalBadge, SponsorStrip } from '../components/ui';
 import { computeTeamStandings, formatToPar } from '../lib/scoring';
-import { useEvent } from '../lib/store';
+import { fetchEventIfMissing, useEvent } from '../lib/store';
 import { FORMAT_LABELS } from '../lib/types';
 
 const PAGE_SIZE = 10;
@@ -13,6 +13,10 @@ export default function TVPage() {
   const { eventId } = useParams();
   const event = useEvent(eventId);
   const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    if (!event && eventId) void fetchEventIfMissing(eventId);
+  }, [event, eventId]);
 
   // Refresh tick: re-renders the clock and rotates pages of standings.
   useEffect(() => {
