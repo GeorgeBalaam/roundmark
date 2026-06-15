@@ -6,7 +6,15 @@
 // on load, keeps it fresh via realtime, and persists mutations server-side.
 
 import { useSyncExternalStore } from 'react';
-import type { AuditEntry, RoundmarkDB, RoundmarkEvent, Scorecard, UserRole } from './types';
+import type {
+  AuditEntry,
+  Registration,
+  RegistrationSettings,
+  RoundmarkDB,
+  RoundmarkEvent,
+  Scorecard,
+  UserRole,
+} from './types';
 import { buildSeedDB } from './seed';
 import { supabase, isSupabaseConfigured } from './supabase';
 import type { RealtimeChannel } from '@supabase/supabase-js';
@@ -58,6 +66,10 @@ function eventFromRow(
     brandColor: (row.brand_color as string) ?? '#27542A',
     accentColor: (row.accent_color as string | null) ?? undefined,
     bgColor: (row.bg_color as string | null) ?? undefined,
+    registration:
+      row.registration_settings && (row.registration_settings as { fields?: unknown }).fields
+        ? (row.registration_settings as RegistrationSettings)
+        : undefined,
     logoUrl: (row.logo_url as string | null) ?? undefined,
     charityName: (row.charity_name as string | null) ?? undefined,
     charityUrl: (row.charity_url as string | null) ?? undefined,
@@ -93,6 +105,7 @@ function rowFromEvent(
     brand_color: event.brandColor ?? '#27542A',
     accent_color: event.accentColor ?? null,
     bg_color: event.bgColor ?? null,
+    registration_settings: event.registration ?? {},
     logo_url: event.logoUrl ?? null,
     charity_name: event.charityName ?? null,
     charity_url: event.charityUrl ?? null,
@@ -131,7 +144,12 @@ function rowFromScorecard(
 function loadLocal(): RoundmarkDB {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as RoundmarkDB;
+    if (raw) {
+      const db = JSON.parse(raw) as RoundmarkDB;
+      // Backfill fields added in later versions so older saved data stays valid.
+      if (!db.registrations) db.registrations = [];
+      return db;
+    }
   } catch {
     // fall through to seed
   }
@@ -281,6 +299,109 @@ async function syncAuditToSupabase(entry: AuditEntry) {
   if (error) console.error('[supabase] audit insert:', error.message);
 }
 
+// --- Registrations --------------------------------------------------------
+
+type SupabaseRegistrationRow = {
+  id: string;
+  event_id: string;
+  status: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  company: string | null;
+  handicap: number | null;
+  dietary: string | null;
+  phone: string | null;
+  notes: string | null;
+  player_id: string | null;
+  created_at: string;
+};
+
+function registrationFromRow(r: SupabaseRegistrationRow): Registration {
+  return {
+    id: r.id,
+    eventId: r.event_id,
+    status: r.status as Registration['status'],
+    firstName: r.first_name ?? '',
+    lastName: r.last_name ?? '',
+    email: r.email ?? '',
+    company: r.company ?? undefined,
+    handicap: r.handicap ?? null,
+    dietary: r.dietary ?? undefined,
+    phone: r.phone ?? undefined,
+    notes: r.notes ?? undefined,
+    playerId: r.player_id ?? undefined,
+    createdAt: r.created_at,
+  };
+}
+
+function rowFromRegistration(reg: Registration): Record<string, unknown> {
+  return {
+    id: reg.id,
+    event_id: reg.eventId,
+    status: reg.status,
+    first_name: reg.firstName,
+    last_name: reg.lastName,
+    email: reg.email,
+    company: reg.company ?? null,
+    handicap: reg.handicap ?? null,
+    dietary: reg.dietary ?? null,
+    phone: reg.phone ?? null,
+    notes: reg.notes ?? null,
+    player_id: reg.playerId ?? null,
+    created_at: reg.createdAt,
+  };
+}
+
+/**
+ * Public sign-up from the event landing page. Adds the registration locally and
+ * (when configured, non-demo) inserts it for the organiser to review.
+ */
+export async function submitRegistration(
+  input: Omit<Registration, 'id' | 'status' | 'createdAt' | 'playerId'>,
+): Promise<string | null> {
+  const reg: Registration = {
+    ...input,
+    id: makeId(),
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+  };
+  mutate((db) => { db.registrations.unshift(reg); });
+
+  if (!isSupabaseConfigured || !supabase || reg.eventId.startsWith('demo-')) return null;
+  const { error } = await supabase.from('registrations').insert(rowFromRegistration(reg));
+  return error?.message ?? null;
+}
+
+/** Push a registration status change (approve/decline) to Supabase. */
+export async function syncRegistration(reg: Registration) {
+  if (!isSupabaseConfigured || !supabase || reg.eventId.startsWith('demo-')) return;
+  const { error } = await supabase.from('registrations').upsert(rowFromRegistration(reg));
+  if (error) console.error('[supabase] registration upsert:', error.message);
+}
+
+/** Owner-only: load an event's registrations into the local cache. */
+export async function fetchRegistrations(eventId: string) {
+  if (!isSupabaseConfigured || !supabase || eventId.startsWith('demo-')) return;
+  const { data, error } = await supabase
+    .from('registrations')
+    .select('*')
+    .eq('event_id', eventId)
+    .order('created_at', { ascending: false });
+  if (error || !data) return;
+  const fresh = (data as SupabaseRegistrationRow[]).map(registrationFromRow);
+  mutate((db) => {
+    const others = db.registrations.filter((r) => r.eventId !== eventId);
+    db.registrations = [...fresh, ...others];
+  });
+}
+
+export function useRegistrations(eventId: string | undefined): Registration[] {
+  const db = useDB();
+  if (!eventId) return [];
+  return db.registrations.filter((r) => r.eventId === eventId);
+}
+
 /** Called from events.ts after createEvent / duplicateEvent to push to Supabase. */
 export function syncEvent(eventId: string) {
   const event = getDB().events.find((e) => e.id === eventId);
@@ -372,6 +493,24 @@ async function loadEventsFromSupabase(userId: string) {
         : [];
     db.auditLogs = [...parsedAudit, ...demoAudit];
   });
+
+  // Sign-ups for the owner's events (RLS: owner-only).
+  if (eventIds.length) {
+    const { data: regRows } = await supabase
+      .from('registrations')
+      .select('*')
+      .in('event_id', eventIds)
+      .order('created_at', { ascending: false });
+    if (regRows) {
+      const fresh = (regRows as SupabaseRegistrationRow[]).map(registrationFromRow);
+      mutate((db) => {
+        const others = db.registrations.filter(
+          (r) => !eventIds.includes(r.eventId) && (currentRole === 'admin' || !r.eventId.startsWith('demo-')),
+        );
+        db.registrations = [...fresh, ...others];
+      });
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -437,6 +576,21 @@ function startRealtime() {
           const existing = db.events[idx];
           // Merge scalar fields; keep in-memory scorecards (separate table).
           db.events[idx] = { ...eventFromRow(row, []), scorecards: existing.scorecards };
+        });
+      },
+    )
+    .on(
+      'postgres_changes',
+      // RLS limits these to the owner, so anon visitors never receive sign-up PII.
+      { event: '*', schema: 'public', table: 'registrations' },
+      (payload) => {
+        const row = payload.new as SupabaseRegistrationRow | null;
+        if (!row?.id) return;
+        mutate((db) => {
+          const reg = registrationFromRow(row);
+          const idx = db.registrations.findIndex((r) => r.id === reg.id);
+          if (idx === -1) db.registrations.unshift(reg);
+          else db.registrations[idx] = reg;
         });
       },
     )
