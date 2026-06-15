@@ -6,6 +6,7 @@ import { Link, useParams } from 'react-router-dom';
 import { Badge, Button, ConfirmDialog, Logo, SponsorStrip } from '../components/ui';
 import { useToast } from '../components/toast-context';
 import { stablefordPoints } from '../lib/scoring';
+import { eventThemeVars } from '../lib/theme';
 import { fetchEventIfMissing, updateEvent, useEvent } from '../lib/store';
 import type { RoundmarkEvent, ScoreCell, Team } from '../lib/types';
 import { FORMAT_LABELS } from '../lib/types';
@@ -203,7 +204,7 @@ export default function ScorecardPage() {
   const holesDone = card.submittedHoles.length;
 
   return (
-    <div className="score-shell">
+    <div className="score-shell" style={eventThemeVars(event)}>
       {/* Event header */}
       <div className="row-between" style={{ paddingTop: 'var(--space-2)' }}>
         {event.logoUrl ? (

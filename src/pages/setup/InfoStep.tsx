@@ -1,7 +1,9 @@
 // Wizard step 1: basic event info.
 
 import { Card, FormField, SelectField } from '../../components/ui';
+import { ImageUpload } from '../../components/ImageUpload';
 import { updateEvent } from '../../lib/store';
+import { readableTextOn } from '../../lib/theme';
 import type { EventType, RoundmarkEvent, ScoringFormat } from '../../lib/types';
 import { EVENT_TYPE_LABELS, FORMAT_LABELS } from '../../lib/types';
 
@@ -58,21 +60,6 @@ export default function InfoStep({ event }: { event: RoundmarkEvent }) {
           options={Object.entries(FORMAT_LABELS).map(([value, label]) => ({ value, label }))}
         />
         <FormField
-          label="Branding colour"
-          type="color"
-          hint="Used on the public event pages."
-          value={event.brandColor ?? '#27542A'}
-          onChange={(e) => set('brandColor', e.target.value)}
-          style={{ padding: 4, height: 44 }}
-        />
-        <FormField
-          label="Logo URL"
-          placeholder="https://… (optional)"
-          hint="Shown on the leaderboard and scorecards. Upload support is coming later."
-          value={event.logoUrl ?? ''}
-          onChange={(e) => set('logoUrl', e.target.value || undefined)}
-        />
-        <FormField
           label="Charity name"
           placeholder="Optional"
           value={event.charityName ?? ''}
@@ -84,6 +71,90 @@ export default function InfoStep({ event }: { event: RoundmarkEvent }) {
           value={event.charityUrl ?? ''}
           onChange={(e) => set('charityUrl', e.target.value || undefined)}
         />
+      </div>
+
+      <hr style={{ border: 'none', borderTop: '1px solid var(--rm-border-soft)', margin: 'var(--space-8) 0 var(--space-6)' }} />
+
+      <h3 style={{ marginBottom: 4 }}>Branding</h3>
+      <p className="text-muted" style={{ marginTop: 0, marginBottom: 'var(--space-6)' }}>
+        Colours and logo are applied to your public leaderboard, scorecards and results.
+      </p>
+
+      <div className="form-grid">
+        <FormField
+          label="Primary colour"
+          type="color"
+          hint="Headers & buttons."
+          value={event.brandColor ?? '#27542A'}
+          onChange={(e) => set('brandColor', e.target.value)}
+          style={{ padding: 4, height: 44 }}
+        />
+        <FormField
+          label="Accent colour"
+          type="color"
+          hint="Highlights & scores."
+          value={event.accentColor ?? '#8DB259'}
+          onChange={(e) => set('accentColor', e.target.value)}
+          style={{ padding: 4, height: 44 }}
+        />
+        <FormField
+          label="Background colour"
+          type="color"
+          hint="Page background."
+          value={event.bgColor ?? '#F7F3EA'}
+          onChange={(e) => set('bgColor', e.target.value)}
+          style={{ padding: 4, height: 44 }}
+        />
+        <ImageUpload
+          label="Event logo"
+          hint="PNG/SVG, under 2 MB. Shown on the leaderboard and scorecards."
+          value={event.logoUrl}
+          onChange={(url) => set('logoUrl', url)}
+          pathPrefix={event.id}
+        />
+      </div>
+
+      {/* Live brand preview */}
+      <div
+        style={{
+          marginTop: 'var(--space-6)',
+          borderRadius: 'var(--radius-card)',
+          overflow: 'hidden',
+          border: '1px solid var(--rm-border)',
+          background: event.bgColor ?? '#F7F3EA',
+        }}
+      >
+        <div
+          style={{
+            background: event.brandColor ?? '#27542A',
+            color: readableTextOn(event.brandColor ?? '#27542A'),
+            padding: 'var(--space-4) var(--space-5)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--space-3)',
+            fontFamily: 'var(--font-heading)',
+            fontWeight: 700,
+          }}
+        >
+          {event.logoUrl && (
+            <img src={event.logoUrl} alt="" style={{ height: 24, width: 'auto' }} />
+          )}
+          {event.name || 'Your event'} — Live leaderboard
+        </div>
+        <div className="row" style={{ padding: 'var(--space-4) var(--space-5)', alignItems: 'center' }}>
+          <span style={{ fontWeight: 600 }}>Birdie Brigade</span>
+          <span
+            style={{
+              marginLeft: 'auto',
+              fontFamily: 'var(--font-heading)',
+              fontWeight: 700,
+              fontSize: '1.3rem',
+              color: event.accentColor ?? '#8DB259',
+            }}
+          >
+            58
+          </span>
+        </div>
       </div>
     </Card>
   );

@@ -7,6 +7,7 @@ import { Badge, Button, Card, Logo, ProvisionalBadge, SponsorStrip } from '../co
 import { useToast } from '../components/toast-context';
 import { buildResultsCSV, downloadCSV } from '../lib/csv';
 import { computeTeamStandings } from '../lib/scoring';
+import { eventThemeVars } from '../lib/theme';
 import { fetchEventIfMissing, useEvent } from '../lib/store';
 import { FORMAT_LABELS } from '../lib/types';
 
@@ -43,6 +44,7 @@ export default function ResultsPage() {
   }
 
   return (
+    <div style={{ minHeight: '100vh', background: 'var(--rm-bg)', ...eventThemeVars(event) }}>
     <div className="container" style={{ paddingTop: 'var(--space-10)', paddingBottom: 'var(--space-16)', maxWidth: 900 }}>
       <div className="row-between" style={{ marginBottom: 'var(--space-8)' }}>
         {event.logoUrl ? <img src={event.logoUrl} alt="" style={{ height: 34 }} /> : <Logo variant="horizontal" height={30} />}
@@ -134,6 +136,7 @@ export default function ResultsPage() {
       <p className="text-small text-muted text-center" style={{ marginTop: 'var(--space-10)' }}>
         Powered by Roundmark — the easiest way to run a company golf day.
       </p>
+    </div>
     </div>
   );
 }

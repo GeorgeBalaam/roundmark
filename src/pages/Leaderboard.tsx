@@ -7,6 +7,7 @@ import { Link, useParams } from 'react-router-dom';
 import { IndividualStandingsTable, LeaderboardTable } from '../components/leaderboard';
 import { Badge, Button, Logo, ProvisionalBadge, SponsorStrip } from '../components/ui';
 import { eventProgress } from '../lib/scoring';
+import { eventThemeVars, readableTextOn } from '../lib/theme';
 import { fetchEventIfMissing, useEvent } from '../lib/store';
 import { FORMAT_LABELS } from '../lib/types';
 
@@ -42,16 +43,21 @@ export default function LeaderboardPage() {
   const showIndividuals = event.format !== 'scramble';
   void tick;
 
+  const headerBg = event.brandColor ?? 'var(--rm-green-deep)';
+  const headerText = readableTextOn(event.brandColor ?? '#27542A');
+  const headerSubText = headerText === '#ffffff' ? 'rgba(255,255,255,0.85)' : 'rgba(23,33,27,0.7)';
+  const useWhiteLogo = headerText === '#ffffff';
+
   return (
-    <div style={{ minHeight: '100vh' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--rm-bg)', ...eventThemeVars(event) }}>
       {/* Branded header */}
-      <header style={{ background: event.brandColor ?? 'var(--rm-green-deep)', color: '#fff', padding: 'var(--space-8) 0 var(--space-6)' }}>
+      <header style={{ background: headerBg, color: headerText, padding: 'var(--space-8) 0 var(--space-6)' }}>
         <div className="container">
           <div className="row-between">
             {event.logoUrl ? (
               <img src={event.logoUrl} alt="" style={{ height: 36 }} />
             ) : (
-              <Logo variant="horizontal-white" height={30} />
+              <Logo variant={useWhiteLogo ? 'horizontal-white' : 'horizontal'} height={30} />
             )}
             <div className="row no-print">
               <Button variant="secondary" size="sm" to={`/tv/${event.id}`}>
@@ -59,15 +65,15 @@ export default function LeaderboardPage() {
               </Button>
             </div>
           </div>
-          <h1 style={{ color: '#fff', marginTop: 'var(--space-5)', marginBottom: 4 }}>{event.name}</h1>
-          <p style={{ color: 'rgba(255,255,255,0.85)', margin: 0 }}>
+          <h1 style={{ color: headerText, marginTop: 'var(--space-5)', marginBottom: 4 }}>{event.name}</h1>
+          <p style={{ color: headerSubText, margin: 0 }}>
             {event.venue} · {FORMAT_LABELS[event.format]}
             {event.charityName && (
               <>
                 {' '}
                 · In support of{' '}
                 {event.charityUrl ? (
-                  <a href={event.charityUrl} target="_blank" rel="noreferrer" style={{ color: '#fff' }}>
+                  <a href={event.charityUrl} target="_blank" rel="noreferrer" style={{ color: headerText }}>
                     {event.charityName}
                   </a>
                 ) : (
