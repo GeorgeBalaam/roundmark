@@ -4,12 +4,12 @@ import { DashboardShell } from '../components/shells';
 import { Button, Card, EmptyState, EventStatusBadge, PageHeader } from '../components/ui';
 import { TrophyIcon, ICON_SM } from '../lib/icons';
 import { computeTeamStandings } from '../lib/scoring';
-import { useDB } from '../lib/store';
+import { useVisibleEvents } from '../lib/store';
 import { FORMAT_LABELS } from '../lib/types';
 
 export default function HistoryPage() {
-  const db = useDB();
-  const completed = db.events.filter((e) => e.status === 'completed');
+  const events = useVisibleEvents();
+  const completed = events.filter((e) => e.status === 'completed');
 
   return (
     <DashboardShell>

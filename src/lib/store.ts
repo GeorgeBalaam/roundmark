@@ -220,6 +220,17 @@ export function useEvent(eventId: string | undefined): RoundmarkEvent | undefine
   return db.events.find((e) => e.id === eventId);
 }
 
+/**
+ * Events to list in organiser dashboards/history. Demo sample events are an
+ * admin-only tool, so they're hidden from non-admins here — but remain in the
+ * cache so public sample-leaderboard links keep working for everyone.
+ */
+export function useVisibleEvents(): RoundmarkEvent[] {
+  const db = useDB();
+  const isAdmin = db.session?.role === 'admin';
+  return isAdmin ? db.events : db.events.filter((e) => !e.id.startsWith('demo-'));
+}
+
 export function mutate(fn: (db: RoundmarkDB) => void) {
   const db = getDB();
   fn(db);
@@ -517,6 +528,30 @@ export async function deleteEventFromSupabase(eventId: string) {
 }
 
 // ---------------------------------------------------------------------------
+// Demo events are static sample data (public "sample leaderboard" links). They
+// live only in the seed — never in Supabase — so they must never be shadowed by
+// a server row and must survive auth changes. Sourced fresh from the seed and
+// memoised for the session.
+// ---------------------------------------------------------------------------
+
+let demoEventsCache: RoundmarkEvent[] | null = null;
+let demoAuditCache: AuditEntry[] | null = null;
+
+function demoSeedEvents(): RoundmarkEvent[] {
+  if (!demoEventsCache) {
+    const seed = buildSeedDB();
+    demoEventsCache = seed.events.filter((e) => e.id.startsWith('demo-'));
+    demoAuditCache = seed.auditLogs.filter((a) => a.eventId.startsWith('demo-'));
+  }
+  return demoEventsCache;
+}
+
+function demoSeedAudit(): AuditEntry[] {
+  if (!demoAuditCache) demoSeedEvents();
+  return demoAuditCache ?? [];
+}
+
+// ---------------------------------------------------------------------------
 // Supabase read: hydrate events owned by the signed-in user
 // ---------------------------------------------------------------------------
 
@@ -574,23 +609,16 @@ async function loadEventsFromSupabase(userId: string) {
   }));
 
   mutate((db) => {
-    // Demo events (id prefix 'demo-') are an admin-only tool. Non-admins only
-    // ever see their own real Supabase events.
-    const merged = [...supabaseEvents];
-    if (currentRole === 'admin') {
-      const demoEvents = db.events.filter((e) => e.id.startsWith('demo-'));
-      for (const de of demoEvents) {
-        if (!merged.some((e) => e.id === de.id)) merged.push(de);
-      }
-    }
-    db.events = merged;
+    // Demo events are static sample data: always sourced fresh from the seed and
+    // never shadowed by a (possibly stale) Supabase row of the same id. They stay
+    // in the cache for everyone so public sample links work regardless of auth;
+    // the dashboard/history views hide them from non-admins (see useVisibleEvents).
+    const demoEvents = demoSeedEvents();
+    const demoIds = new Set(demoEvents.map((e) => e.id));
+    const realEvents = supabaseEvents.filter((e) => !demoIds.has(e.id));
+    db.events = [...realEvents, ...demoEvents];
 
-    const demoAudit =
-      currentRole === 'admin'
-        ? db.auditLogs.filter(
-            (a) => a.eventId.startsWith('demo-') && !parsedAudit.some((b) => b.id === a.id),
-          )
-        : [];
+    const demoAudit = demoSeedAudit().filter((a) => !parsedAudit.some((b) => b.id === a.id));
     db.auditLogs = [...parsedAudit, ...demoAudit];
   });
 
@@ -618,9 +646,18 @@ async function loadEventsFromSupabase(userId: string) {
 // ---------------------------------------------------------------------------
 
 export async function fetchEventIfMissing(eventId: string): Promise<void> {
-  if (!isSupabaseConfigured || !supabase) return;
   const db = getDB();
   if (db.events.some((e) => e.id === eventId)) return;
+
+  // Demo events are local seed data — inject from the seed, never hit Supabase.
+  // Guards public sample links even if a prior signed-in session pruned the cache.
+  if (eventId.startsWith('demo-')) {
+    const demo = demoSeedEvents().find((e) => e.id === eventId);
+    if (demo) mutate((d) => { if (!d.events.some((e) => e.id === eventId)) d.events.push(demo); });
+    return;
+  }
+
+  if (!isSupabaseConfigured || !supabase) return;
 
   const [{ data: eventRow }, { data: scRows }] = await Promise.all([
     supabase.from('events').select('*').eq('id', eventId).single(),

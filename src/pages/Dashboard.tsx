@@ -15,7 +15,7 @@ import {
 import { useToast } from '../components/toast-context';
 import { createEvent, duplicateEvent, eventChecklist } from '../lib/events';
 import { eventProgress } from '../lib/scoring';
-import { resetDemoData, useDB, useIsAdmin, useRole } from '../lib/store';
+import { resetDemoData, useIsAdmin, useRole, useVisibleEvents } from '../lib/store';
 import type { RoundmarkEvent } from '../lib/types';
 import { EVENT_TYPE_LABELS, FORMAT_LABELS } from '../lib/types';
 
@@ -136,7 +136,7 @@ function EventCard({ event }: { event: RoundmarkEvent }) {
 }
 
 export default function DashboardPage() {
-  const db = useDB();
+  const events = useVisibleEvents();
   const navigate = useNavigate();
   const toast = useToast();
   const isAdmin = useIsAdmin();
@@ -145,7 +145,6 @@ export default function DashboardPage() {
   // Players have their own dashboard — redirect them on arrival.
   if (role === 'player') return <Navigate to="/me" replace />;
 
-  const events = db.events;
   const upcoming = events.filter((e) => e.status === 'draft' || e.status === 'ready').length;
   const live = events.filter((e) => e.status === 'live').length;
   const completed = events.filter((e) => e.status === 'completed').length;
