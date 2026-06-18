@@ -7,6 +7,7 @@
 
 import { useSyncExternalStore } from 'react';
 import type {
+  AccountSettings,
   AuditEntry,
   Registration,
   RegistrationSettings,
@@ -148,6 +149,7 @@ function loadLocal(): RoundmarkDB {
       const db = JSON.parse(raw) as RoundmarkDB;
       // Backfill fields added in later versions so older saved data stays valid.
       if (!db.registrations) db.registrations = [];
+      if (!db.accountSettings) db.accountSettings = {};
       return db;
     }
   } catch {
@@ -400,6 +402,104 @@ export function useRegistrations(eventId: string | undefined): Registration[] {
   const db = useDB();
   if (!eventId) return [];
   return db.registrations.filter((r) => r.eventId === eventId);
+}
+
+// --- Account settings -------------------------------------------------------
+
+export function useAccountSettings(): AccountSettings {
+  const db = useDB();
+  return db.accountSettings ?? {};
+}
+
+async function syncAccountSettingsToSupabase(settings: AccountSettings) {
+  if (!isSupabaseConfigured || !supabase || !currentUserId) return;
+  const { error } = await supabase.from('profiles').upsert({
+    id: currentUserId,
+    display_name: settings.displayName ?? null,
+    company_name: settings.companyName ?? null,
+    website: settings.website ?? null,
+    default_brand_color: settings.defaultBrandColor ?? null,
+    default_accent_color: settings.defaultAccentColor ?? null,
+    default_bg_color: settings.defaultBgColor ?? null,
+    default_logo_url: settings.defaultLogoUrl ?? null,
+  });
+  if (error) console.error('[supabase] profile upsert:', error.message);
+}
+
+export async function updateAccountSettings(partial: Partial<AccountSettings>) {
+  mutate((db) => {
+    db.accountSettings = { ...(db.accountSettings ?? {}), ...partial };
+  });
+  await syncAccountSettingsToSupabase(getDB().accountSettings ?? {});
+}
+
+async function loadAccountSettings(userId: string) {
+  if (!supabase) return;
+  const { data, error } = await supabase
+    .from('profiles')
+    .select(
+      'display_name,company_name,website,default_brand_color,default_accent_color,default_bg_color,default_logo_url',
+    )
+    .eq('id', userId)
+    .single();
+  if (error || !data) return;
+  const d = data as Record<string, string | null>;
+  const settings: AccountSettings = {
+    displayName: d.display_name ?? undefined,
+    companyName: d.company_name ?? undefined,
+    website: d.website ?? undefined,
+    defaultBrandColor: d.default_brand_color ?? undefined,
+    defaultAccentColor: d.default_accent_color ?? undefined,
+    defaultBgColor: d.default_bg_color ?? undefined,
+    defaultLogoUrl: d.default_logo_url ?? undefined,
+  };
+  mutate((db) => { db.accountSettings = settings; });
+}
+
+// --- Player events ----------------------------------------------------------
+
+/**
+ * Fetch events where the current user appears as a player (by email).
+ * Used for the /me player history dashboard. Merges into the local cache
+ * without overwriting events already loaded as owner.
+ */
+export async function loadPlayerEvents(email: string) {
+  if (!isSupabaseConfigured || !supabase || !email) return;
+
+  // JSONB containment: events.players @> '[{"email":"..."}]'
+  const { data, error } = await supabase
+    .from('events')
+    .select('*')
+    .filter('players', 'cs', JSON.stringify([{ email }]));
+  if (error || !data) return;
+
+  const rows = data as Record<string, unknown>[];
+  const eventIds = rows.map((r) => r.id as string);
+  if (!eventIds.length) return;
+
+  const { data: scRows } = await supabase
+    .from('scorecards')
+    .select('*')
+    .in('event_id', eventIds);
+
+  const scByEvent: Record<string, SupabaseScorecardRow[]> = {};
+  for (const sc of scRows ?? []) {
+    const eid = (sc as Record<string, string>).event_id;
+    if (!scByEvent[eid]) scByEvent[eid] = [];
+    scByEvent[eid].push(sc as SupabaseScorecardRow);
+  }
+
+  const playerEvents = rows.map((row) =>
+    eventFromRow(row, scByEvent[row.id as string] ?? []),
+  );
+
+  mutate((db) => {
+    for (const event of playerEvents) {
+      if (!db.events.some((e) => e.id === event.id)) {
+        db.events.push(event);
+      }
+    }
+  });
 }
 
 /** Called from events.ts after createEvent / duplicateEvent to push to Supabase. */
@@ -703,5 +803,8 @@ async function hydrateUser(userId: string, email: string | undefined) {
   mutate((db) => {
     db.session = { organiserName: email ?? 'Organiser', role: currentRole };
   });
-  await loadEventsFromSupabase(userId);
+  await Promise.all([
+    loadEventsFromSupabase(userId),
+    loadAccountSettings(userId),
+  ]);
 }

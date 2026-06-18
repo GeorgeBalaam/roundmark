@@ -1,7 +1,7 @@
 // Organiser dashboard: the control centre.
 
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { DashboardShell } from '../components/shells';
 import {
   Badge,
@@ -15,7 +15,7 @@ import {
 import { useToast } from '../components/toast-context';
 import { createEvent, duplicateEvent, eventChecklist } from '../lib/events';
 import { eventProgress } from '../lib/scoring';
-import { resetDemoData, useDB, useIsAdmin } from '../lib/store';
+import { resetDemoData, useDB, useIsAdmin, useRole } from '../lib/store';
 import type { RoundmarkEvent } from '../lib/types';
 import { EVENT_TYPE_LABELS, FORMAT_LABELS } from '../lib/types';
 
@@ -140,6 +140,10 @@ export default function DashboardPage() {
   const navigate = useNavigate();
   const toast = useToast();
   const isAdmin = useIsAdmin();
+  const role = useRole();
+
+  // Players have their own dashboard — redirect them on arrival.
+  if (role === 'player') return <Navigate to="/me" replace />;
 
   const events = db.events;
   const upcoming = events.filter((e) => e.status === 'draft' || e.status === 'ready').length;

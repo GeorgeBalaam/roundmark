@@ -175,6 +175,17 @@ export interface RoundmarkEvent {
   lockedAt?: string;
 }
 
+/** Saved organiser profile: company details + event colour defaults. */
+export interface AccountSettings {
+  displayName?: string;
+  companyName?: string;
+  website?: string;
+  defaultBrandColor?: string;
+  defaultAccentColor?: string;
+  defaultBgColor?: string;
+  defaultLogoUrl?: string;
+}
+
 export interface RoundmarkDB {
   version: number;
   events: RoundmarkEvent[];
@@ -183,6 +194,8 @@ export interface RoundmarkDB {
   registrations: Registration[];
   /** Signed-in user. role drives which dashboard + features they get. */
   session: { organiserName: string; role: UserRole } | null;
+  /** Organiser account/company preferences — pre-fills new events. */
+  accountSettings?: AccountSettings;
 }
 
 export const EVENT_TYPE_LABELS: Record<EventType, string> = {
