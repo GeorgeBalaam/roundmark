@@ -69,6 +69,7 @@ export default function ResultsPage() {
         <h1 style={{ marginTop: 'var(--space-4)', marginBottom: 4 }}>{event.name}</h1>
         <p className="text-muted">
           {event.date && new Date(`${event.date}T00:00:00`).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} · {event.venue} · {FORMAT_LABELS[event.format]}
+          {event.format !== 'scramble' && <> · {(event.scoringMode ?? 'gross') === 'net' ? 'Net' : 'Gross'}</>}
           {event.charityName && <> · In support of {event.charityName}</>}
         </p>
       </div>

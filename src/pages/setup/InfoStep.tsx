@@ -59,6 +59,22 @@ export default function InfoStep({ event }: { event: RoundmarkEvent }) {
           onChange={(e) => set('format', e.target.value as ScoringFormat)}
           options={Object.entries(FORMAT_LABELS).map(([value, label]) => ({ value, label }))}
         />
+        {event.format !== 'scramble' && (
+          <SelectField
+            label="Handicap scoring"
+            hint={
+              (event.scoringMode ?? 'gross') === 'net'
+                ? 'Net — strokes allocated by handicap and stroke index.'
+                : 'Gross — raw scores, no handicap applied.'
+            }
+            value={event.scoringMode ?? 'gross'}
+            onChange={(e) => set('scoringMode', e.target.value as 'gross' | 'net')}
+            options={[
+              { value: 'net', label: 'Net (handicap)' },
+              { value: 'gross', label: 'Gross (scratch)' },
+            ]}
+          />
+        )}
         <FormField
           label="Charity name"
           placeholder="Optional"

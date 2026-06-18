@@ -1,18 +1,60 @@
 // Scoring engine: stroke play, Stableford, Texas Scramble + countback tie-break.
-// Kept deliberately simple and transparent for the MVP.
-// TODO(production): proper handicap-adjusted Stableford using stroke index
-// allowances (WHS playing handicap). v1 uses a gross-to-par points model.
+// Supports gross and net (handicap) play. Net uses full-handicap stroke-index
+// allocation (WHS-style): strokes are allocated hole-by-hole by stroke index,
+// supporting handicaps above the hole count and plus (negative) handicaps, and
+// 9- or 18-hole rounds. Scramble stays team-gross (team handicap models are a
+// separate concern and out of scope here).
 
 import type { RoundmarkEvent, ScoreCell, Scorecard, Team } from './types';
 
+/** True when the event is played off handicap (net). */
+export function isNetEvent(event: RoundmarkEvent): boolean {
+  return event.scoringMode === 'net' && event.format !== 'scramble';
+}
+
 /**
- * Basic gross Stableford points.
+ * Strokes a player receives on a given hole under full handicap allowance.
+ *  - Positive handicap: strokes received on the hardest holes first (stroke
+ *    index 1 upward); handicaps > holeCount wrap to a 2nd/3rd stroke.
+ *  - Plus (negative) handicap: strokes given back on the easiest holes first
+ *    (highest stroke index), returned as a negative number.
+ *  - null/undefined handicap: 0 (treated as scratch).
+ * `holeCount` is the number of holes in the round (9 or 18).
+ */
+export function strokesReceived(
+  handicap: number | null | undefined,
+  strokeIndex: number,
+  holeCount: number,
+): number {
+  if (handicap == null || holeCount <= 0) return 0;
+  const h = Math.round(handicap);
+  if (h === 0) return 0;
+  const mag = Math.abs(h);
+  const base = Math.floor(mag / holeCount);
+  const remainder = mag % holeCount;
+  if (h > 0) {
+    return base + (strokeIndex <= remainder ? 1 : 0);
+  }
+  // Plus handicap: give strokes back on the `remainder` easiest holes.
+  const give = base + (strokeIndex > holeCount - remainder ? 1 : 0);
+  return give === 0 ? 0 : -give;
+}
+
+/**
+ * Gross Stableford points.
  * Eagle or better: 4+, birdie 3, par 2, bogey 1, double+ 0. 'X' scores 0.
  */
 export function stablefordPoints(par: number, gross: ScoreCell): number {
   if (gross === null || gross === 'X') return 0;
   const diff = gross - par;
   return Math.max(0, 2 - diff);
+}
+
+/** Net Stableford points: points scored off the net (handicap-adjusted) score. */
+export function netStablefordPoints(par: number, gross: ScoreCell, strokesGot: number): number {
+  if (gross === null || gross === 'X') return 0;
+  const net = gross - strokesGot;
+  return Math.max(0, 2 - (net - par));
 }
 
 export interface PlayerStanding {
@@ -55,6 +97,10 @@ function playerName(event: RoundmarkEvent, playerId: string): string {
   return p ? `${p.firstName} ${p.lastName}` : 'Unknown player';
 }
 
+function playerHandicap(event: RoundmarkEvent, playerId: string): number | null {
+  return event.players.find((pl) => pl.id === playerId)?.handicap ?? null;
+}
+
 /** Holes (numbers) a team has any data saved for. */
 export function holesCompleted(event: RoundmarkEvent, team: Team): number[] {
   const card = event.scorecards[team.id];
@@ -71,6 +117,9 @@ function emptySeries(event: RoundmarkEvent): number[] {
  * (last 9, last 6, last 3, last 1 — relative to hole 18, the standard method).
  */
 export function computeTeamStandings(event: RoundmarkEvent): TeamStanding[] {
+  const net = isNetEvent(event);
+  const holeCount = event.holes.length;
+
   const rows: TeamStanding[] = event.teams.map((team) => {
     const card: Scorecard | undefined = event.scorecards[team.id];
     const series = emptySeries(event);
@@ -96,7 +145,9 @@ export function computeTeamStandings(event: RoundmarkEvent): TeamStanding[] {
             const cell = card.playerScores[pid]?.[i] ?? null;
             if (cell !== null) {
               any = true;
-              holePts += stablefordPoints(hole.par, cell);
+              holePts += net
+                ? netStablefordPoints(hole.par, cell, strokesReceived(playerHandicap(event, pid), hole.strokeIndex, holeCount))
+                : stablefordPoints(hole.par, cell);
             }
           }
           if (any) {
@@ -105,14 +156,17 @@ export function computeTeamStandings(event: RoundmarkEvent): TeamStanding[] {
             holesWith.push(hole.number);
           }
         } else {
-          // stroke play: team total = sum of player gross strokes
+          // stroke play: team total = sum of player strokes (net subtracts each
+          // player's allocated strokes for the hole).
           let holeStrokes = 0;
           let any = false;
           for (const pid of team.playerIds) {
             const strokes = cellStrokes(card.playerScores[pid]?.[i] ?? null, hole.par);
             if (strokes !== null) {
               any = true;
-              holeStrokes += strokes;
+              holeStrokes += net
+                ? strokes - strokesReceived(playerHandicap(event, pid), hole.strokeIndex, holeCount)
+                : strokes;
             }
           }
           if (any) {
@@ -189,11 +243,14 @@ function countbackCompare(a: TeamStanding, b: TeamStanding, lowerIsBetter: boole
 /** Individual standings (stroke play and stableford only). */
 export function computePlayerStandings(event: RoundmarkEvent): PlayerStanding[] {
   if (event.format === 'scramble') return [];
+  const net = isNetEvent(event);
+  const holeCount = event.holes.length;
   const rows: PlayerStanding[] = [];
 
   for (const team of event.teams) {
     const card = event.scorecards[team.id];
     for (const pid of team.playerIds) {
+      const hc = playerHandicap(event, pid);
       let total = 0;
       let parPlayed = 0;
       let thru = 0;
@@ -202,10 +259,13 @@ export function computePlayerStandings(event: RoundmarkEvent): PlayerStanding[] 
           const cell = card.playerScores[pid]?.[hole.number - 1] ?? null;
           if (cell === null) continue;
           thru += 1;
+          const got = net ? strokesReceived(hc, hole.strokeIndex, holeCount) : 0;
           if (event.format === 'stableford') {
-            total += stablefordPoints(hole.par, cell);
+            total += net
+              ? netStablefordPoints(hole.par, cell, got)
+              : stablefordPoints(hole.par, cell);
           } else {
-            total += cellStrokes(cell, hole.par) ?? 0;
+            total += (cellStrokes(cell, hole.par) ?? 0) - got;
             parPlayed += hole.par;
           }
         }

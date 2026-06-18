@@ -147,6 +147,11 @@ export interface RoundmarkEvent {
   venue: string;
   type: EventType;
   format: ScoringFormat;
+  /**
+   * Whether the competition is played off handicap. 'net' applies WHS-style
+   * stroke allowances; 'gross'/undefined scores raw. Ignored for scramble.
+   */
+  scoringMode?: 'gross' | 'net';
   /** Primary brand colour — headers and primary buttons on public pages. */
   brandColor?: string;
   /** Accent colour — highlights, score figures, live badges. */

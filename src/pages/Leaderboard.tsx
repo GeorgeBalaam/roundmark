@@ -68,6 +68,7 @@ export default function LeaderboardPage() {
           <h1 style={{ color: headerText, marginTop: 'var(--space-5)', marginBottom: 4 }}>{event.name}</h1>
           <p style={{ color: headerSubText, margin: 0 }}>
             {event.venue} · {FORMAT_LABELS[event.format]}
+            {event.format !== 'scramble' && ` · ${(event.scoringMode ?? 'gross') === 'net' ? 'Net' : 'Gross'}`}
             {event.charityName && (
               <>
                 {' '}
