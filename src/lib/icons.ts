@@ -53,6 +53,7 @@ export {
   ChevronRight as NextIcon,
   ChevronUp as MoveUpIcon,
   ChevronDown as MoveDownIcon,
+  ChevronDown as DisclosureIcon, // expand/collapse a menu
 
   // Results / side competitions
   Medal as MedalIcon, // podium places (colour by rank)

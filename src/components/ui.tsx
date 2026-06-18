@@ -3,6 +3,8 @@
 
 import {
   useCallback,
+  useEffect,
+  useRef,
   useState,
   type ReactNode,
   type ButtonHTMLAttributes,
@@ -15,7 +17,7 @@ import type { LucideIcon } from 'lucide-react';
 import type { EventStatus } from '../lib/types';
 import { STATUS_LABELS } from '../lib/types';
 import { ToastContext, type ToastTone } from './toast-context';
-import { EventIcon, CheckIcon, LockIcon, ICON_SM, ICON_XL } from '../lib/icons';
+import { EventIcon, CheckIcon, LockIcon, DisclosureIcon, ICON_SM, ICON_XL } from '../lib/icons';
 
 // ---------- Logo ----------
 
@@ -272,24 +274,97 @@ export function ProgressStepper({
   activeKey: string;
   onSelect: (key: string) => void;
 }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const compactRef = useRef<HTMLDivElement>(null);
+
+  const activeIndex = Math.max(0, steps.findIndex((s) => s.key === activeKey));
+  const activeStep = steps[activeIndex];
+  const progressPct = steps.length ? ((activeIndex + 1) / steps.length) * 100 : 0;
+
+  // Close the mobile jump-menu on outside click or Escape.
+  useEffect(() => {
+    if (!menuOpen) return;
+    function onDown(e: MouseEvent) {
+      if (compactRef.current && !compactRef.current.contains(e.target as Node)) setMenuOpen(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setMenuOpen(false);
+    }
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [menuOpen]);
+
+  function pick(key: string) {
+    onSelect(key);
+    setMenuOpen(false);
+  }
+
   return (
-    <div className="stepper" role="tablist" aria-label="Setup steps">
-      {steps.map((step, i) => {
-        const active = step.key === activeKey;
-        return (
-          <button
-            key={step.key}
-            role="tab"
-            aria-selected={active}
-            className={`stepper-item ${active ? 'active' : ''} ${step.done ? 'done' : ''}`}
-            onClick={() => onSelect(step.key)}
-          >
-            <span className="stepper-dot">{step.done ? <CheckIcon size={ICON_SM} /> : i + 1}</span>
-            {step.label}
-          </button>
-        );
-      })}
-    </div>
+    <>
+      {/* Desktop: full horizontal strip */}
+      <div className="stepper stepper-desktop" role="tablist" aria-label="Setup steps">
+        {steps.map((step, i) => {
+          const active = step.key === activeKey;
+          return (
+            <button
+              key={step.key}
+              role="tab"
+              aria-selected={active}
+              className={`stepper-item ${active ? 'active' : ''} ${step.done ? 'done' : ''}`}
+              onClick={() => onSelect(step.key)}
+            >
+              <span className="stepper-dot">{step.done ? <CheckIcon size={ICON_SM} /> : i + 1}</span>
+              {step.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Mobile: compact header with progress + jump menu */}
+      <div className="stepper-compact" ref={compactRef} data-open={menuOpen}>
+        <button
+          type="button"
+          className="stepper-compact-trigger"
+          aria-expanded={menuOpen}
+          aria-haspopup="listbox"
+          onClick={() => setMenuOpen((o) => !o)}
+        >
+          <span className="stepper-compact-meta">
+            <span className="stepper-compact-count">Step {activeIndex + 1} of {steps.length}</span>
+            <span className="stepper-compact-title">{activeStep?.label}</span>
+          </span>
+          <DisclosureIcon size={20} className="stepper-compact-chev" aria-hidden="true" />
+        </button>
+        <div className="stepper-progress" aria-hidden="true">
+          <div className="stepper-progress-fill" style={{ width: `${progressPct}%` }} />
+        </div>
+        {menuOpen && (
+          <ul className="stepper-menu" role="listbox" aria-label="Jump to setup step">
+            {steps.map((step, i) => {
+              const active = step.key === activeKey;
+              return (
+                <li key={step.key}>
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={active}
+                    className={`stepper-menu-item ${active ? 'active' : ''} ${step.done ? 'done' : ''}`}
+                    onClick={() => pick(step.key)}
+                  >
+                    <span className="stepper-dot">{step.done ? <CheckIcon size={ICON_SM} /> : i + 1}</span>
+                    {step.label}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    </>
   );
 }
 
