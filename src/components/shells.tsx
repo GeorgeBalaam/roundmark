@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { signOut, useDB, useRole } from '../lib/store';
 import { Button, Logo } from './ui';
+import { EventIcon, TrophyIcon, PlayerIcon, SettingsIcon, SignOutIcon, ICON_SM } from '../lib/icons';
 
 export function MarketingHeader() {
   const db = useDB();
@@ -55,18 +56,18 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           {isOrganiser && (
             <>
               <NavLink to="/app" end className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
-                <span aria-hidden="true">⛳</span> Events
+                <EventIcon size={ICON_SM} aria-hidden="true" /> Events
               </NavLink>
               <NavLink to="/app/history" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
-                <span aria-hidden="true">🏆</span> History
+                <TrophyIcon size={ICON_SM} aria-hidden="true" /> History
               </NavLink>
             </>
           )}
           <NavLink to="/me" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
-            <span aria-hidden="true">👤</span> My scores
+            <PlayerIcon size={ICON_SM} aria-hidden="true" /> My scores
           </NavLink>
           <NavLink to="/app/settings" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
-            <span aria-hidden="true">⚙️</span> Settings
+            <SettingsIcon size={ICON_SM} aria-hidden="true" /> Settings
           </NavLink>
         </nav>
         <div style={{ marginTop: 'auto' }} className="stack-2">
@@ -78,7 +79,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             onClick={handleSignOut}
             style={{ width: '100%', border: 'none', background: 'none', cursor: 'pointer' }}
           >
-            <span aria-hidden="true">↩</span> Sign out
+            <SignOutIcon size={ICON_SM} aria-hidden="true" /> Sign out
           </button>
         </div>
       </aside>

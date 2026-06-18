@@ -10,6 +10,9 @@ import { computeTeamStandings } from '../lib/scoring';
 import { eventThemeVars } from '../lib/theme';
 import { fetchEventIfMissing, useEvent } from '../lib/store';
 import { FORMAT_LABELS } from '../lib/types';
+import { PrintIcon, DownloadIcon, MedalIcon, NearestPinIcon, LongestDriveIcon, ICON_SM, ICON_LG } from '../lib/icons';
+
+const MEDAL_COLORS = ['#d4af37', '#9ca3af', '#cd7f32']; // gold, silver, bronze
 
 export default function ResultsPage() {
   const { eventId } = useParams();
@@ -53,10 +56,10 @@ export default function ResultsPage() {
             Share link
           </Button>
           <Button variant="secondary" size="sm" onClick={() => window.print()}>
-            🖨 Print
+            <PrintIcon size={ICON_SM} /> Print
           </Button>
           <Button variant="secondary" size="sm" onClick={() => downloadCSV(`${event.name || 'event'}-results.csv`, buildResultsCSV(event))}>
-            ⬇ Export CSV
+            <DownloadIcon size={ICON_SM} /> Export CSV
           </Button>
         </div>
       </div>
@@ -81,8 +84,8 @@ export default function ResultsPage() {
         <div className="grid-cards" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', marginBottom: 'var(--space-8)' }}>
           {podium.map((row, i) => (
             <Card key={row.teamId} style={i === 0 ? { border: '2px solid var(--rm-green-fairway)' } : undefined}>
-              <div style={{ fontSize: '1.6rem' }} aria-hidden="true">
-                {['🥇', '🥈', '🥉'][i]}
+              <div style={{ lineHeight: 0, marginBottom: 'var(--space-2)', color: MEDAL_COLORS[i] }} aria-hidden="true">
+                <MedalIcon size={ICON_LG} />
               </div>
               <h3 style={{ marginBottom: 2 }}>{row.name}</h3>
               <div className="text-small text-muted" style={{ marginBottom: 'var(--space-2)' }}>
@@ -113,13 +116,13 @@ export default function ResultsPage() {
           <div className="grid-cards" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
             {event.sideComps.nearestPinWinner && (
               <Card>
-                <div className="stat-label">🎯 Nearest the pin{event.sideComps.nearestPinHole ? ` — hole ${event.sideComps.nearestPinHole}` : ''}</div>
+                <div className="stat-label" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><NearestPinIcon size={ICON_SM} /> Nearest the pin{event.sideComps.nearestPinHole ? ` — hole ${event.sideComps.nearestPinHole}` : ''}</div>
                 <div className="stat-value" style={{ fontSize: '1.4rem' }}>{event.sideComps.nearestPinWinner}</div>
               </Card>
             )}
             {event.sideComps.longestDriveWinner && (
               <Card>
-                <div className="stat-label">🚀 Longest drive{event.sideComps.longestDriveHole ? ` — hole ${event.sideComps.longestDriveHole}` : ''}</div>
+                <div className="stat-label" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><LongestDriveIcon size={ICON_SM} /> Longest drive{event.sideComps.longestDriveHole ? ` — hole ${event.sideComps.longestDriveHole}` : ''}</div>
                 <div className="stat-value" style={{ fontSize: '1.4rem' }}>{event.sideComps.longestDriveWinner}</div>
               </Card>
             )}

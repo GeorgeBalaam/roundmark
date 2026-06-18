@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Badge, Button, Card, FieldWrap, Logo, SponsorStrip } from '../components/ui';
 import { Countdown } from '../components/Countdown';
+import { SuccessIcon, ICON_XL } from '../lib/icons';
 import { isFutureEvent } from '../lib/dates';
 import { fetchEventIfMissing, submitRegistration, useEvent } from '../lib/store';
 import { eventThemeVars, readableTextOn } from '../lib/theme';
@@ -127,7 +128,7 @@ export default function EventLandingPage() {
         {/* Registration form */}
         {done ? (
           <Card padLg style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '2.4rem' }}>✅</div>
+            <div style={{ color: 'var(--rm-success)', display: 'flex', justifyContent: 'center', marginBottom: 'var(--space-2)' }}><SuccessIcon size={ICON_XL} /></div>
             <h2>You're registered!</h2>
             <p className="text-muted">
               Thanks {form.firstName || 'there'} — your registration is in. Your place

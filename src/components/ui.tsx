@@ -11,9 +11,11 @@ import {
   type TextareaHTMLAttributes,
 } from 'react';
 import { Link } from 'react-router-dom';
+import type { LucideIcon } from 'lucide-react';
 import type { EventStatus } from '../lib/types';
 import { STATUS_LABELS } from '../lib/types';
 import { ToastContext, type ToastTone } from './toast-context';
+import { EventIcon, CheckIcon, LockIcon, ICON_SM, ICON_XL } from '../lib/icons';
 
 // ---------- Logo ----------
 
@@ -118,7 +120,7 @@ const STATUS_TONES: Record<EventStatus, BadgeTone> = {
 };
 
 export function EventStatusBadge({ status, locked }: { status: EventStatus; locked?: boolean }) {
-  if (locked) return <Badge tone="neutral-dark">🔒 Locked</Badge>;
+  if (locked) return <Badge tone="neutral-dark"><LockIcon size={ICON_SM} /> Locked</Badge>;
   return (
     <Badge tone={STATUS_TONES[status]} pulse={status === 'live'}>
       {STATUS_LABELS[status]}
@@ -231,12 +233,12 @@ export function TextAreaField({ label, hint, error, id, ...rest }: TextAreaField
 // ---------- Empty state ----------
 
 export function EmptyState({
-  icon = '⛳',
+  icon: Icon = EventIcon,
   title,
   body,
   action,
 }: {
-  icon?: string;
+  icon?: LucideIcon;
   title: string;
   body?: string;
   action?: ReactNode;
@@ -244,7 +246,7 @@ export function EmptyState({
   return (
     <div className="empty-state">
       <div className="empty-state-icon" aria-hidden="true">
-        {icon}
+        <Icon size={ICON_XL} strokeWidth={1.5} />
       </div>
       <h3>{title}</h3>
       {body && <p>{body}</p>}
@@ -282,7 +284,7 @@ export function ProgressStepper({
             className={`stepper-item ${active ? 'active' : ''} ${step.done ? 'done' : ''}`}
             onClick={() => onSelect(step.key)}
           >
-            <span className="stepper-dot">{step.done ? '✓' : i + 1}</span>
+            <span className="stepper-dot">{step.done ? <CheckIcon size={ICON_SM} /> : i + 1}</span>
             {step.label}
           </button>
         );
@@ -332,7 +334,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       <div className="toast-stack" aria-live="polite">
         {toasts.map((t) => (
           <div key={t.id} className={`toast ${t.tone !== 'default' ? `toast-${t.tone}` : ''}`}>
-            {t.tone === 'success' && '✓'}
+            {t.tone === 'success' && <CheckIcon size={ICON_SM} />}
             {t.message}
           </div>
         ))}

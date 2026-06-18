@@ -5,25 +5,29 @@ import { MarketingHeader } from '../components/shells';
 import { Badge, Button, Card, Logo } from '../components/ui';
 import { signInDemo, useDB } from '../lib/store';
 import { isSupabaseConfigured } from '../lib/supabase';
+import {
+  SetupIcon, MobileIcon, LeaderboardIcon, SecureIcon, CheckIcon, EventIcon,
+  ICON_SM, ICON_LG,
+} from '../lib/icons';
 
 const BENEFITS = [
   {
-    icon: '📋',
+    icon: SetupIcon,
     title: 'Set up the day',
     body: 'Create the event, load the course, add players and build balanced teams in minutes — no spreadsheets.',
   },
   {
-    icon: '📱',
+    icon: MobileIcon,
     title: 'Share QR scorecards',
     body: 'Every team gets a QR code. Players scan and score on their phones. No app downloads, no accounts.',
   },
   {
-    icon: '📊',
+    icon: LeaderboardIcon,
     title: 'Track the leaderboard',
     body: 'Scores flow straight to a live leaderboard you can share with players or put on the clubhouse TV.',
   },
   {
-    icon: '🔒',
+    icon: SecureIcon,
     title: 'Lock and share results',
     body: 'Review scores, fix mistakes, lock the final result and share or export it — done before the first drink.',
   },
@@ -145,7 +149,7 @@ function MiniScorecard() {
         ))}
       </div>
       <div style={{ marginTop: 'var(--space-4)' }}>
-        <Badge tone="green">✓ Scores saved</Badge>
+        <Badge tone="green"><CheckIcon size={ICON_SM} /> Scores saved</Badge>
       </div>
     </Card>
   );
@@ -178,7 +182,7 @@ export default function MarketingPage() {
         {/* Hero */}
         <section className="container" style={{ paddingTop: 'var(--space-16)', paddingBottom: 'var(--space-16)' }}>
           <div style={{ maxWidth: 720, margin: '0 auto', textAlign: 'center' }}>
-            <Badge tone="green">⛳ Self-serve golf day software</Badge>
+            <Badge tone="green"><EventIcon size={ICON_SM} /> Self-serve golf day software</Badge>
             <h1 style={{ marginTop: 'var(--space-5)' }}>
               Run a better golf day without spreadsheets or app downloads.
             </h1>
@@ -220,8 +224,8 @@ export default function MarketingPage() {
             <div className="grid-cards" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
               {BENEFITS.map((b) => (
                 <Card key={b.title} soft hover>
-                  <div style={{ fontSize: '1.8rem', marginBottom: 'var(--space-3)' }} aria-hidden="true">
-                    {b.icon}
+                  <div style={{ marginBottom: 'var(--space-3)', color: 'var(--rm-green-fairway)' }} aria-hidden="true">
+                    <b.icon size={ICON_LG} strokeWidth={1.75} />
                   </div>
                   <h3>{b.title}</h3>
                   <p className="text-muted" style={{ margin: 0 }}>
@@ -284,8 +288,8 @@ export default function MarketingPage() {
                   <p className="text-muted">{p.blurb}</p>
                   <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 var(--space-6)' }} className="stack-2">
                     {p.features.map((f) => (
-                      <li key={f} style={{ display: 'flex', gap: 8, fontSize: '0.92rem' }}>
-                        <span style={{ color: 'var(--rm-green-fresh)' }}>✓</span> {f}
+                      <li key={f} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.92rem' }}>
+                        <CheckIcon size={ICON_SM} style={{ color: 'var(--rm-green-fresh)', flexShrink: 0 }} /> {f}
                       </li>
                     ))}
                   </ul>

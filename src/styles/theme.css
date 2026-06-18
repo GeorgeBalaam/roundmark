@@ -887,3 +887,8 @@ button { font-family: inherit; }
 ::selection {
   background: rgba(141, 178, 89, 0.35);
 }
+
+/* Iconography (lucide-react): inherit text colour, stay inline-aligned. */
+svg.lucide { flex-shrink: 0; vertical-align: -0.125em; }
+.empty-state-icon { color: var(--rm-muted); line-height: 0; }
+.empty-state-icon svg { display: block; margin: 0 auto; }

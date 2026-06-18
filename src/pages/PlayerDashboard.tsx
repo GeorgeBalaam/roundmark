@@ -13,6 +13,7 @@ import {
   PageHeader,
   StatCard,
 } from '../components/ui';
+import { EventIcon } from '../lib/icons';
 import { computePlayerStandings, formatToPar } from '../lib/scoring';
 import { loadPlayerEvents, useDB, useSession, useStoreLoading } from '../lib/store';
 import type { RoundmarkEvent } from '../lib/types';
@@ -140,7 +141,7 @@ export default function PlayerDashboardPage() {
 
       {!loading && myEvents.length === 0 ? (
         <EmptyState
-          icon="⛳"
+          icon={EventIcon}
           title="No events yet"
           body="When an organiser adds you to a golf day you'll see your scores and results here."
         />

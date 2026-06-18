@@ -1,6 +1,7 @@
 // Wizard step 5: sponsor slots (up to 6).
 
 import { Button, Card, EmptyState, FormField, SponsorStrip } from '../../components/ui';
+import { SponsorIcon, MoveUpIcon, MoveDownIcon, ICON_SM } from '../../lib/icons';
 import { ImageUpload } from '../../components/ImageUpload';
 import { useToast } from '../../components/toast-context';
 import { makeId, updateEvent } from '../../lib/store';
@@ -65,7 +66,7 @@ export default function SponsorsStep({ event }: { event: RoundmarkEvent }) {
 
       {sorted.length === 0 ? (
         <EmptyState
-          icon="🤝"
+          icon={SponsorIcon}
           title="No sponsors yet"
           body="Optional — but a great way to make sponsor-backed and charity days feel professional."
           action={<Button onClick={addSponsor}>Add the first sponsor</Button>}
@@ -107,10 +108,10 @@ export default function SponsorsStep({ event }: { event: RoundmarkEvent }) {
                   </div>
                   <div className="row" style={{ paddingBottom: 'var(--space-5)' }}>
                     <Button size="sm" variant="ghost" onClick={() => move(s.id, -1)} disabled={i === 0} aria-label="Move sponsor up">
-                      ↑
+                      <MoveUpIcon size={ICON_SM} />
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => move(s.id, 1)} disabled={i === sorted.length - 1} aria-label="Move sponsor down">
-                      ↓
+                      <MoveDownIcon size={ICON_SM} />
                     </Button>
                     <Button size="sm" variant="danger" onClick={() => removeSponsor(s.id)}>
                       Remove

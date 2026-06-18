@@ -2,13 +2,14 @@
 
 import { Button, EmptyState } from '../../components/ui';
 import { QRLinkCard } from '../../components/qr';
+import { LinkIcon, PrintIcon, ICON_SM } from '../../lib/icons';
 import type { RoundmarkEvent } from '../../lib/types';
 
 export default function LinksStep({ event }: { event: RoundmarkEvent }) {
   if (event.teams.length === 0) {
     return (
       <EmptyState
-        icon="🔗"
+        icon={LinkIcon}
         title="Create teams first"
         body="Each team gets its own QR scoring link. Go back a step and build your teams."
       />
@@ -26,7 +27,7 @@ export default function LinksStep({ event }: { event: RoundmarkEvent }) {
           </p>
         </div>
         <Button variant="secondary" to={`/print/${event.id}/qr`}>
-          🖨 Print QR sheet
+          <PrintIcon size={ICON_SM} /> Print QR sheet
         </Button>
       </div>
       <div className="grid-cards">

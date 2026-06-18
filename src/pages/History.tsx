@@ -2,6 +2,7 @@
 
 import { DashboardShell } from '../components/shells';
 import { Button, Card, EmptyState, EventStatusBadge, PageHeader } from '../components/ui';
+import { TrophyIcon, ICON_SM } from '../lib/icons';
 import { computeTeamStandings } from '../lib/scoring';
 import { useDB } from '../lib/store';
 import { FORMAT_LABELS } from '../lib/types';
@@ -18,7 +19,7 @@ export default function HistoryPage() {
       />
       {completed.length === 0 ? (
         <EmptyState
-          icon="🏆"
+          icon={TrophyIcon}
           title="No completed events yet"
           body="When you lock the results of a golf day it will appear here with its winner and final standings."
         />
@@ -38,7 +39,7 @@ export default function HistoryPage() {
                 </p>
                 {winner && winner.thru > 0 && (
                   <p style={{ margin: 'var(--space-4) 0' }}>
-                    <span aria-hidden="true">🏆</span> <strong>{winner.name}</strong>
+                    <TrophyIcon size={ICON_SM} aria-hidden="true" style={{ verticalAlign: '-0.15em' }} /> <strong>{winner.name}</strong>
                     <span className="text-muted"> — {winner.value} {event.format === 'stableford' ? 'pts' : 'strokes'}</span>
                   </p>
                 )}

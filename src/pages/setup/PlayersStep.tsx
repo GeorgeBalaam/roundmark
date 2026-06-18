@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 import { Badge, Button, Card, EmptyState, FormField, SelectField, TextAreaField } from '../../components/ui';
 import { useToast } from '../../components/toast-context';
+import { TeamsIcon } from '../../lib/icons';
 import { PLAYER_IMPORT_SAMPLE, parsePlayerImport } from '../../lib/csv';
 import { syncScorecards } from '../../lib/events';
 import { makeId, updateEvent } from '../../lib/store';
@@ -213,7 +214,7 @@ export default function PlayersStep({ event }: { event: RoundmarkEvent }) {
       {/* Player list */}
       {event.players.length === 0 ? (
         <EmptyState
-          icon="🧑‍🤝‍🧑"
+          icon={TeamsIcon}
           title="No players yet"
           body="Add players one at a time or paste a whole list from your spreadsheet."
         />

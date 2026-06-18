@@ -3,6 +3,7 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { signIn, signInDemo, useSession } from '../lib/store';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { Button, Card, FieldWrap, Logo } from '../components/ui';
+import { MailIcon, ICON_XL } from '../lib/icons';
 
 export function RequireSession({ children }: { children: ReactNode }) {
   const session = useSession();
@@ -63,7 +64,7 @@ export default function LoginPage() {
                 padding: 'var(--space-5)',
               }}
             >
-              <div style={{ fontSize: '2rem', marginBottom: 8 }}>📬</div>
+              <div style={{ marginBottom: 8, color: 'var(--rm-green-fairway)', display: 'flex', justifyContent: 'center' }}><MailIcon size={ICON_XL} strokeWidth={1.5} /></div>
               <h3 style={{ marginBottom: 8 }}>Check your email</h3>
               <p className="text-muted" style={{ fontSize: '0.9rem' }}>
                 We sent a sign-in link to <strong>{email}</strong>. Click it to

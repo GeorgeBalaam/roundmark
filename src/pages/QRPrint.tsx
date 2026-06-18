@@ -3,6 +3,7 @@
 import { useParams } from 'react-router-dom';
 import { QRLinkCard } from '../components/qr';
 import { Button, Logo, PageHeader } from '../components/ui';
+import { PrintIcon, ICON_SM } from '../lib/icons';
 import { useEvent } from '../lib/store';
 
 export default function QRPrintPage() {
@@ -29,7 +30,7 @@ export default function QRPrintPage() {
               <Button variant="secondary" to={`/app/event/${event.id}?step=links`}>
                 Back to setup
               </Button>
-              <Button onClick={() => window.print()}>🖨 Print</Button>
+              <Button onClick={() => window.print()}><PrintIcon size={ICON_SM} /> Print</Button>
             </>
           }
         />

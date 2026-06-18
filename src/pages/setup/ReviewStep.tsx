@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Badge, Button, Card, ConfirmDialog, EventStatusBadge } from '../../components/ui';
 import { useToast } from '../../components/toast-context';
+import { CheckIcon, TodoIcon, GoLiveIcon, ICON_SM } from '../../lib/icons';
 import { eventChecklist } from '../../lib/events';
 import { addAudit, updateEvent } from '../../lib/store';
 import type { EventStatus, RoundmarkEvent } from '../../lib/types';
@@ -56,8 +57,8 @@ export default function ReviewStep({ event }: { event: RoundmarkEvent }) {
         <div className="stack-2">
           {items.map((item) => (
             <div key={item.key} className="row">
-              <span aria-hidden="true" style={{ width: 22, color: item.done ? 'var(--rm-success)' : 'var(--rm-live)' }}>
-                {item.done ? '✓' : '○'}
+              <span aria-hidden="true" style={{ width: 22, display: 'inline-flex', color: item.done ? 'var(--rm-success)' : 'var(--rm-live)' }}>
+                {item.done ? <CheckIcon size={ICON_SM} /> : <TodoIcon size={ICON_SM} />}
               </span>
               <span style={{ color: item.done ? 'var(--rm-ink)' : 'var(--rm-muted)' }}>{item.label}</span>
             </div>
@@ -85,7 +86,7 @@ export default function ReviewStep({ event }: { event: RoundmarkEvent }) {
               Going live opens scoring for every team link and starts the public leaderboard.
             </p>
             <div className="row" style={{ flexWrap: 'wrap' }}>
-              <Button onClick={() => setConfirmLive(true)}>🟢 Go live</Button>
+              <Button onClick={() => setConfirmLive(true)}><GoLiveIcon size={ICON_SM} /> Go live</Button>
               <Button variant="ghost" onClick={() => setStatus('draft', 'Event moved back to draft')}>
                 Back to draft
               </Button>

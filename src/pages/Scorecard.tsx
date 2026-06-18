@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Badge, Button, ConfirmDialog, Logo, SponsorStrip } from '../components/ui';
 import { useToast } from '../components/toast-context';
+import { LockIcon, CheckIcon, ICON_SM } from '../lib/icons';
 import { stablefordPoints } from '../lib/scoring';
 import { eventThemeVars } from '../lib/theme';
 import { fetchEventIfMissing, updateEvent, useEvent } from '../lib/store';
@@ -185,7 +186,7 @@ export default function ScorecardPage() {
       if (!c.submittedHoles.includes(hole.number)) c.submittedHoles.push(hole.number);
       c.updatedAt = new Date().toISOString();
     });
-    toast(`Hole ${hole.number} saved ✓`, 'success');
+    toast(`Hole ${hole.number} saved`, 'success');
     // Advance to the next unplayed hole.
     const remaining = order.filter(
       (h) => h !== hole.number && !card!.submittedHoles.includes(h),
@@ -236,7 +237,7 @@ export default function ScorecardPage() {
       )}
       {(event.locked || event.status === 'completed') && (
         <div style={{ margin: 'var(--space-4) 0', textAlign: 'center' }}>
-          <Badge tone="neutral-dark">🔒 Results are locked — scores can no longer change</Badge>
+          <Badge tone="neutral-dark"><LockIcon size={ICON_SM} /> Results are locked — scores can no longer change</Badge>
         </div>
       )}
 
@@ -264,7 +265,7 @@ export default function ScorecardPage() {
         <div className="score-hole-meta">
           <span>Par {hole.par}</span>
           <span>Stroke index {hole.strokeIndex}</span>
-          {alreadySubmitted && <Badge tone="green">✓ Saved</Badge>}
+          {alreadySubmitted && <Badge tone="green"><CheckIcon size={ICON_SM} /> Saved</Badge>}
         </div>
       </div>
 

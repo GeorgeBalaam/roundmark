@@ -6,6 +6,7 @@ import { useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Badge, Button, Card, EmptyState, TextAreaField } from '../../components/ui';
 import { useToast } from '../../components/toast-context';
+import { RegistrationIcon } from '../../lib/icons';
 import {
   fetchRegistrations,
   updateEvent,
@@ -149,7 +150,7 @@ export default function RegistrationsStep({ event }: { event: RoundmarkEvent }) 
 
         {registrations.length === 0 ? (
           <EmptyState
-            icon="📝"
+            icon={RegistrationIcon}
             title="No sign-ups yet"
             body="Share the registration link above. As people register they'll appear here for you to approve."
           />

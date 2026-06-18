@@ -17,6 +17,7 @@ import {
   StatCard,
 } from '../components/ui';
 import { useToast } from '../components/toast-context';
+import { ResumeIcon, PauseIcon, LockIcon, DownloadIcon, CheckIcon, ICON_SM } from '../lib/icons';
 import { buildResultsCSV, downloadCSV } from '../lib/csv';
 import { lockResults, unlockResults } from '../lib/events';
 import { eventProgress } from '../lib/scoring';
@@ -200,12 +201,12 @@ export default function ConsolePage() {
           )}
           {event.status === 'live' && !event.locked && (
             <Button variant="secondary" onClick={() => setPaused(!event.scoringPaused)}>
-              {event.scoringPaused ? '▶ Resume scoring' : '⏸ Pause scoring'}
+              {event.scoringPaused ? <><ResumeIcon size={ICON_SM} /> Resume scoring</> : <><PauseIcon size={ICON_SM} /> Pause scoring</>}
             </Button>
           )}
           {!event.locked ? (
             <Button variant="danger" onClick={() => setConfirmLock(true)}>
-              🔒 Lock results
+              <LockIcon size={ICON_SM} /> Lock results
             </Button>
           ) : (
             <Button variant="secondary" onClick={() => setConfirmUnlock(true)}>
@@ -213,7 +214,7 @@ export default function ConsolePage() {
             </Button>
           )}
           <Button variant="ghost" onClick={() => downloadCSV(`${event.name || 'event'}-results.csv`, buildResultsCSV(event))}>
-            ⬇ Export CSV
+            <DownloadIcon size={ICON_SM} /> Export CSV
           </Button>
           {event.locked && (
             <Button variant="ghost" to={`/results/${event.id}`}>
@@ -247,7 +248,7 @@ export default function ConsolePage() {
                   <td className="num">{team.startingHole}</td>
                   <td className="num">
                     {saved.length}/{event.holes.length}{' '}
-                    {saved.length === event.holes.length && <Badge tone="green">✓</Badge>}
+                    {saved.length === event.holes.length && <Badge tone="green"><CheckIcon size={ICON_SM} /></Badge>}
                   </td>
                   <td className="text-small text-muted" style={{ maxWidth: 280 }}>
                     {missingHoles.length === 0 ? '—' : missingHoles.join(', ')}

@@ -5,6 +5,7 @@
 import { useParams, useSearchParams } from 'react-router-dom';
 import { DashboardShell } from '../components/shells';
 import { Button, EventStatusBadge, PageHeader, ProgressStepper } from '../components/ui';
+import { PrevIcon, NextIcon, ICON_SM } from '../lib/icons';
 import { eventChecklist } from '../lib/events';
 import { useEvent } from '../lib/store';
 import InfoStep from './setup/InfoStep';
@@ -111,14 +112,14 @@ export default function EventSetupPage() {
         <div>
           {prev && (
             <Button variant="ghost" onClick={() => goTo(prev)}>
-              ← {STEP_LABELS[prev]}
+              <PrevIcon size={ICON_SM} /> {STEP_LABELS[prev]}
             </Button>
           )}
         </div>
         <div>
           {next && (
             <Button onClick={() => goTo(next)}>
-              {STEP_LABELS[next]} →
+              {STEP_LABELS[next]} <NextIcon size={ICON_SM} />
             </Button>
           )}
         </div>

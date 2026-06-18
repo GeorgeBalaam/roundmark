@@ -2,6 +2,7 @@
 
 import { Badge, Button, Card } from '../../components/ui';
 import { useToast } from '../../components/toast-context';
+import { CheckIcon, ICON_SM } from '../../lib/icons';
 import { PAR_72_TEMPLATE } from '../../lib/seed';
 import { updateEvent } from '../../lib/store';
 import type { RoundmarkEvent } from '../../lib/types';
@@ -123,7 +124,7 @@ export default function CourseStep({ event }: { event: RoundmarkEvent }) {
         </Card>
       ) : (
         <div>
-          <Badge tone="green">✓ All holes have a par and stroke index</Badge>
+          <Badge tone="green"><CheckIcon size={ICON_SM} /> All holes have a par and stroke index</Badge>
         </div>
       )}
     </div>

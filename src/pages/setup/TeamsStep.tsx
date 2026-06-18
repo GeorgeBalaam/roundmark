@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Badge, Button, Card, ConfirmDialog, EmptyState } from '../../components/ui';
 import { useToast } from '../../components/toast-context';
+import { TeamsIcon, BalanceIcon, CloseIcon, ICON_SM } from '../../lib/icons';
 import { autoBalanceTeams, syncScorecards } from '../../lib/events';
 import { makeId, updateEvent } from '../../lib/store';
 import type { Player, RoundmarkEvent, Team } from '../../lib/types';
@@ -76,7 +77,7 @@ export default function TeamsStep({ event }: { event: RoundmarkEvent }) {
   if (event.players.length === 0) {
     return (
       <EmptyState
-        icon="👥"
+        icon={TeamsIcon}
         title="Add players first"
         body="Teams are built from your player list. Go back a step and add or import players."
       />
@@ -111,7 +112,7 @@ export default function TeamsStep({ event }: { event: RoundmarkEvent }) {
             <Button
               onClick={() => (event.teams.length > 0 ? setConfirmRebalance(true) : runAutoBalance())}
             >
-              ⚖ Auto-balance teams
+              <BalanceIcon size={ICON_SM} /> Auto-balance teams
             </Button>
           </div>
         </div>
@@ -127,7 +128,7 @@ export default function TeamsStep({ event }: { event: RoundmarkEvent }) {
 
       {event.teams.length === 0 ? (
         <EmptyState
-          icon="🏌️"
+          icon={TeamsIcon}
           title="No teams yet"
           body={`Auto-balance your ${event.players.length} players into teams of ${teamSize}, or start a team manually.`}
           action={
@@ -155,8 +156,8 @@ export default function TeamsStep({ event }: { event: RoundmarkEvent }) {
                       aria-label="Team name"
                       onChange={(e) => patchTeam(team.id, { name: e.target.value })}
                     />
-                    <Button size="sm" variant="ghost" onClick={() => removeTeam(team.id)}>
-                      ✕
+                    <Button size="sm" variant="ghost" onClick={() => removeTeam(team.id)} aria-label="Remove team">
+                      <CloseIcon size={ICON_SM} />
                     </Button>
                   </div>
 
@@ -178,9 +179,9 @@ export default function TeamsStep({ event }: { event: RoundmarkEvent }) {
                           <button
                             onClick={() => unassignPlayer(team.id, pid)}
                             aria-label={`Remove ${p.firstName} from ${team.name}`}
-                            style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--rm-muted)', fontSize: '1rem', padding: 4 }}
+                            style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--rm-muted)', display: 'inline-flex', padding: 4 }}
                           >
-                            ✕
+                            <CloseIcon size={ICON_SM} />
                           </button>
                         </div>
                       );
