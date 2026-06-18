@@ -60,6 +60,7 @@ export function syncScorecards(event: RoundmarkEvent) {
 }
 
 export function createEvent(partial?: Partial<RoundmarkEvent>): RoundmarkEvent {
+  const { accountSettings } = getDB();
   const now = new Date().toISOString();
   const event: RoundmarkEvent = {
     id: makeId(),
@@ -68,9 +69,10 @@ export function createEvent(partial?: Partial<RoundmarkEvent>): RoundmarkEvent {
     venue: '',
     type: 'company',
     format: 'stableford',
-    brandColor: '#27542A',
-    accentColor: '#8DB259',
-    bgColor: '#F7F3EA',
+    brandColor: accountSettings?.defaultBrandColor ?? '#27542A',
+    accentColor: accountSettings?.defaultAccentColor ?? '#8DB259',
+    bgColor: accountSettings?.defaultBgColor ?? '#F7F3EA',
+    logoUrl: accountSettings?.defaultLogoUrl,
     registration: defaultRegistration(),
     status: 'draft',
     locked: false,

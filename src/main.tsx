@@ -18,6 +18,8 @@ import LeaderboardPage from './pages/Leaderboard';
 import TVPage from './pages/TV';
 import ResultsPage from './pages/Results';
 import QRPrintPage from './pages/QRPrint';
+import SettingsPage from './pages/Settings';
+import PlayerDashboardPage from './pages/PlayerDashboard';
 
 const router = createBrowserRouter([
   { path: '/', element: <MarketingPage /> },
@@ -51,6 +53,22 @@ const router = createBrowserRouter([
     element: (
       <RequireSession>
         <ConsolePage />
+      </RequireSession>
+    ),
+  },
+  {
+    path: '/app/settings',
+    element: (
+      <RequireSession>
+        <SettingsPage />
+      </RequireSession>
+    ),
+  },
+  {
+    path: '/me',
+    element: (
+      <RequireSession>
+        <PlayerDashboardPage />
       </RequireSession>
     ),
   },
