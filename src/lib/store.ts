@@ -17,6 +17,7 @@ import type {
   UserRole,
 } from './types';
 import { buildSeedDB } from './seed';
+import { entitlementsFor, type Entitlements } from './entitlements';
 import { supabase, isSupabaseConfigured } from './supabase';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
@@ -782,6 +783,16 @@ export function useRole(): UserRole | null {
 
 export function useIsAdmin(): boolean {
   return useRole() === 'admin';
+}
+
+/**
+ * Entitlements for the signed-in account (capabilities + limits). Gate features
+ * with `can('…')` / `within('…', used)` rather than checking plan names. Pre-billing
+ * the session has no plan, so this resolves to the default 'full' plan.
+ */
+export function useEntitlements(): Entitlements {
+  const db = useDB();
+  return entitlementsFor(db.session?.plan);
 }
 
 /** Fetch the signed-in user's role from their profile row. */

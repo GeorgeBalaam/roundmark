@@ -197,8 +197,11 @@ export interface RoundmarkDB {
   auditLogs: AuditEntry[];
   /** Event sign-ups (separate from players — see RegistrationStatus). */
   registrations: Registration[];
-  /** Signed-in user. role drives which dashboard + features they get. */
-  session: { organiserName: string; role: UserRole } | null;
+  /**
+   * Signed-in user. role drives which dashboard + features they get; plan is the
+   * entitlements bundle id (undefined = the default 'full' plan for now).
+   */
+  session: { organiserName: string; role: UserRole; plan?: string } | null;
   /** Organiser account/company preferences — pre-fills new events. */
   accountSettings?: AccountSettings;
 }

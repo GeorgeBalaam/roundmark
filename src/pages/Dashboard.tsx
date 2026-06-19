@@ -15,7 +15,7 @@ import {
 import { useToast } from '../components/toast-context';
 import { createEvent, duplicateEvent, eventChecklist } from '../lib/events';
 import { eventProgress } from '../lib/scoring';
-import { resetDemoData, useIsAdmin, useRole, useVisibleEvents } from '../lib/store';
+import { resetDemoData, useEntitlements, useIsAdmin, useRole, useVisibleEvents } from '../lib/store';
 import type { RoundmarkEvent } from '../lib/types';
 import { EVENT_TYPE_LABELS, FORMAT_LABELS } from '../lib/types';
 
@@ -141,6 +141,7 @@ export default function DashboardPage() {
   const toast = useToast();
   const isAdmin = useIsAdmin();
   const role = useRole();
+  const ent = useEntitlements();
 
   // Players have their own dashboard — redirect them on arrival.
   if (role === 'player') return <Navigate to="/me" replace />;
@@ -151,6 +152,13 @@ export default function DashboardPage() {
   const totalPlayers = events.reduce((s, e) => s + e.players.length, 0);
 
   function handleCreate() {
+    // Real events count toward the plan limit (demo samples don't). Unlimited on
+    // the full plan today; the gate is here for when paid tiers are introduced.
+    const realEventCount = events.filter((e) => !e.id.startsWith('demo-')).length;
+    if (!ent.within('maxEvents', realEventCount)) {
+      toast("You've reached your plan's event limit.", 'error');
+      return;
+    }
     const event = createEvent();
     navigate(`/app/event/${event.id}`);
   }
