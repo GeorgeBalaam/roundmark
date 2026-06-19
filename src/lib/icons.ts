@@ -41,6 +41,7 @@ export {
   Radio as GoLiveIcon, // publish / go live
 
   // Actions
+  Plus as AddIcon,
   Printer as PrintIcon,
   Download as DownloadIcon,
   Scale as BalanceIcon, // auto-balance teams

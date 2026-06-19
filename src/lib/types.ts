@@ -141,6 +141,28 @@ export interface SideCompetitions {
   longestDriveHole?: number;
 }
 
+// --- Public event page (branded microsite at /e/:id) -----------------------
+// Ordered content blocks the organiser composes. Public marketing content only
+// (no PII), so it lives on the world-readable event row.
+
+export interface ScheduleItem { id: string; time: string; label: string }
+export interface FaqItem { id: string; q: string; a: string }
+
+export type EventBlock =
+  | { id: string; type: 'text'; title?: string; body: string }
+  | { id: string; type: 'image'; url: string; caption?: string }
+  | { id: string; type: 'schedule'; title?: string; items: ScheduleItem[] }
+  | { id: string; type: 'faq'; title?: string; items: FaqItem[] };
+
+export type EventBlockType = EventBlock['type'];
+
+export const EVENT_BLOCK_LABELS: Record<EventBlockType, string> = {
+  text: 'Text section',
+  image: 'Image',
+  schedule: 'Schedule',
+  faq: 'FAQ',
+};
+
 export interface RoundmarkEvent {
   id: string;
   name: string;
@@ -160,6 +182,10 @@ export interface RoundmarkEvent {
   /** Page background colour for public pages. */
   bgColor?: string;
   logoUrl?: string;
+  /** Optional hero background image for the public event page. */
+  heroImageUrl?: string;
+  /** Ordered content blocks for the public event microsite (/e/:id). */
+  content?: EventBlock[];
   charityName?: string;
   charityUrl?: string;
   status: EventStatus;

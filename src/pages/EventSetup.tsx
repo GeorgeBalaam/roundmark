@@ -11,19 +11,21 @@ import { useEvent } from '../lib/store';
 import InfoStep from './setup/InfoStep';
 import CourseStep from './setup/CourseStep';
 import RegistrationsStep from './setup/RegistrationsStep';
+import PageStep from './setup/PageStep';
 import PlayersStep from './setup/PlayersStep';
 import TeamsStep from './setup/TeamsStep';
 import SponsorsStep from './setup/SponsorsStep';
 import LinksStep from './setup/LinksStep';
 import ReviewStep from './setup/ReviewStep';
 
-const STEP_ORDER = ['info', 'course', 'signups', 'players', 'teams', 'sponsors', 'links', 'review'] as const;
+const STEP_ORDER = ['info', 'course', 'signups', 'page', 'players', 'teams', 'sponsors', 'links', 'review'] as const;
 type StepKey = (typeof STEP_ORDER)[number];
 
 const STEP_LABELS: Record<StepKey, string> = {
   info: 'Basic info',
   course: 'Course',
   signups: 'Sign-ups',
+  page: 'Event page',
   players: 'Players',
   teams: 'Teams',
   sponsors: 'Sponsors',
@@ -59,7 +61,9 @@ export default function EventSetupPage() {
           ? event.sponsors.length > 0
           : key === 'signups'
             ? !!event.registration?.open
-            : !!doneByKey[key],
+            : key === 'page'
+              ? (event.content?.length ?? 0) > 0 || !!event.heroImageUrl
+              : !!doneByKey[key],
   }));
 
   function goTo(key: string) {
@@ -102,6 +106,7 @@ export default function EventSetupPage() {
       {step === 'info' && <InfoStep event={event} />}
       {step === 'course' && <CourseStep event={event} />}
       {step === 'signups' && <RegistrationsStep event={event} />}
+      {step === 'page' && <PageStep event={event} />}
       {step === 'players' && <PlayersStep event={event} />}
       {step === 'teams' && <TeamsStep event={event} />}
       {step === 'sponsors' && <SponsorsStep event={event} />}

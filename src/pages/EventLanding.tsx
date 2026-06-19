@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Badge, Button, Card, FieldWrap, Logo, SponsorStrip } from '../components/ui';
 import { Countdown } from '../components/Countdown';
+import { EventContent } from '../components/EventContent';
 import { SuccessIcon, ICON_XL } from '../lib/icons';
 import { isFutureEvent } from '../lib/dates';
 import { fetchEventIfMissing, submitRegistration, useEvent } from '../lib/store';
@@ -51,9 +52,24 @@ export default function EventLandingPage() {
 
   const reg = event.registration;
   const shownFields = (reg?.fields ?? []).filter((f) => f.show);
-  const headerBg = event.brandColor ?? '#27542A';
-  const headerText = readableTextOn(headerBg);
+  const brandBg = event.brandColor ?? '#27542A';
   const future = isFutureEvent(event.date);
+  const blocks = event.content ?? [];
+
+  // Hero: a background image (with a darkening overlay for legibility) when set,
+  // otherwise the solid brand colour.
+  const hasHeroImage = !!event.heroImageUrl;
+  const headerText = hasHeroImage ? '#ffffff' : readableTextOn(brandBg);
+  const heroStyle: React.CSSProperties = hasHeroImage
+    ? {
+        backgroundImage: `linear-gradient(180deg, rgba(10,18,12,0.55), rgba(10,18,12,0.78)), url(${event.heroImageUrl})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        color: headerText,
+      }
+    : { background: brandBg, color: headerText };
+  const ctaBg = event.accentColor ?? '#8DB259';
+  const showRegisterCta = !done && !!reg?.open;
 
   function set<K extends keyof typeof form>(key: K, value: string) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -93,7 +109,12 @@ export default function EventLandingPage() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--rm-bg)', ...eventThemeVars(event) }}>
       {/* Branded hero */}
-      <header style={{ background: headerBg, color: headerText, padding: 'var(--space-10) 0 var(--space-8)' }}>
+      <header
+        style={{
+          ...heroStyle,
+          padding: hasHeroImage ? 'var(--space-16) 0 var(--space-14)' : 'var(--space-10) 0 var(--space-8)',
+        }}
+      >
         <div className="container" style={{ textAlign: 'center' }}>
           {event.logoUrl ? (
             <img src={event.logoUrl} alt="" style={{ height: 48, marginBottom: 'var(--space-4)' }} />
@@ -108,6 +129,15 @@ export default function EventLandingPage() {
             {FORMAT_LABELS[event.format]}
             {event.charityName && <> · In support of {event.charityName}</>}
           </p>
+          {showRegisterCta && (
+            <a
+              href="#register"
+              className="btn btn-lg"
+              style={{ marginTop: 'var(--space-6)', background: ctaBg, color: readableTextOn(ctaBg), border: 'none' }}
+            >
+              Register to play
+            </a>
+          )}
         </div>
       </header>
 
@@ -125,7 +155,11 @@ export default function EventLandingPage() {
           <p style={{ fontSize: '1.05rem', textAlign: 'center', marginBottom: 'var(--space-8)' }}>{reg.note}</p>
         )}
 
-        {/* Registration form */}
+        {/* Organiser-composed content blocks (the microsite) */}
+        <EventContent blocks={blocks} />
+
+        {/* Registration */}
+        <div id="register" style={{ scrollMarginTop: 'var(--space-6)' }}>
         {done ? (
           <Card padLg style={{ textAlign: 'center' }}>
             <div style={{ color: 'var(--rm-success)', display: 'flex', justifyContent: 'center', marginBottom: 'var(--space-2)' }}><SuccessIcon size={ICON_XL} /></div>
@@ -189,6 +223,7 @@ export default function EventLandingPage() {
             </p>
           </Card>
         )}
+        </div>
 
         {event.sponsors.length > 0 && (
           <div style={{ marginTop: 'var(--space-10)' }}>

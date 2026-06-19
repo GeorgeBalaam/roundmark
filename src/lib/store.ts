@@ -76,6 +76,8 @@ function eventFromRow(
         ? (row.registration_settings as RegistrationSettings)
         : undefined,
     logoUrl: (row.logo_url as string | null) ?? undefined,
+    heroImageUrl: (row.hero_image_url as string | null) ?? undefined,
+    content: (row.content as RoundmarkEvent['content']) ?? [],
     charityName: (row.charity_name as string | null) ?? undefined,
     charityUrl: (row.charity_url as string | null) ?? undefined,
     status: (row.status as RoundmarkEvent['status']) ?? 'draft',
@@ -113,6 +115,8 @@ function rowFromEvent(
     bg_color: event.bgColor ?? null,
     registration_settings: event.registration ?? {},
     logo_url: event.logoUrl ?? null,
+    hero_image_url: event.heroImageUrl ?? null,
+    content: event.content ?? [],
     charity_name: event.charityName ?? null,
     charity_url: event.charityUrl ?? null,
     status: event.status,

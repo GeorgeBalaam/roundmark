@@ -189,6 +189,35 @@ export function buildSeedDB(): RoundmarkDB {
     ],
     scorecards: liveScorecards,
     sideComps: { nearestPinHole: 7, longestDriveHole: 13 },
+    content: [
+      {
+        id: 'demo-b1',
+        type: 'text',
+        title: 'Welcome to the day',
+        body: 'A relaxed 18 holes at Demo Fairway followed by lunch and prizes. Teams of four, Stableford scoring — every hole counts and a bad one never ruins your round. New to golf days? You\'ll be paired with experienced players.',
+      },
+      {
+        id: 'demo-b2',
+        type: 'schedule',
+        title: 'Running order',
+        items: [
+          { id: 'demo-s1', time: '08:30', label: 'Registration, coffee & bacon rolls' },
+          { id: 'demo-s2', time: '09:30', label: 'Shotgun start' },
+          { id: 'demo-s3', time: '14:00', label: 'Lunch in the clubhouse' },
+          { id: 'demo-s4', time: '15:00', label: 'Prizes & nearest-the-pin winners' },
+        ],
+      },
+      {
+        id: 'demo-b3',
+        type: 'faq',
+        title: 'Good to know',
+        items: [
+          { id: 'demo-f1', q: 'What should I bring?', a: 'Clubs, soft spikes and weather-appropriate layers. Buggies can be reserved at the pro shop.' },
+          { id: 'demo-f2', q: 'I don\'t have a handicap — can I still play?', a: 'Absolutely. Pop in your best guess when you register and we\'ll sort teams to keep it fair and fun.' },
+          { id: 'demo-f3', q: 'Is there a dress code?', a: 'Standard golf club attire — collared shirt and tailored shorts or trousers.' },
+        ],
+      },
+    ],
     createdAt: now.toISOString(),
     updatedAt: now.toISOString(),
   };
