@@ -194,6 +194,11 @@ if (typeof window !== 'undefined') {
       emit();
     }
   });
+  // Make sure debounced writes are flushed if the user leaves mid-edit.
+  window.addEventListener('beforeunload', () => flushPending());
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flushPending();
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -244,17 +249,54 @@ export function useVisibleEvents(): RoundmarkEvent[] {
   return isAdmin ? db.events : db.events.filter((e) => !e.id.startsWith('demo-'));
 }
 
-export function mutate(fn: (db: RoundmarkDB) => void) {
+/** Apply an in-memory change and notify React subscribers — no persistence. */
+function applyMutation(fn: (db: RoundmarkDB) => void) {
   const db = getDB();
   fn(db);
   cache = { ...db, events: [...db.events] };
-  persistLocal();
   emit();
+}
+
+export function mutate(fn: (db: RoundmarkDB) => void) {
+  applyMutation(fn);
+  persistLocal();
+}
+
+// Rapid edits (e.g. typing in a setup field) call updateEvent on every keystroke.
+// The in-memory update + re-render stays immediate so inputs and the live preview
+// feel instant, but the expensive work — stringifying the whole DB to localStorage
+// and the Supabase upsert of the entire event aggregate — is debounced so it runs
+// once typing pauses rather than per character. flushPending() drains both on
+// tab-close/hide so nothing is lost.
+let persistTimer: ReturnType<typeof setTimeout> | null = null;
+const syncTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const PERSIST_DEBOUNCE_MS = 350;
+const SYNC_DEBOUNCE_MS = 800;
+
+function schedulePersist() {
+  if (persistTimer) clearTimeout(persistTimer);
+  persistTimer = setTimeout(() => { persistTimer = null; persistLocal(); }, PERSIST_DEBOUNCE_MS);
+}
+
+function scheduleSync(eventId: string) {
+  const existing = syncTimers.get(eventId);
+  if (existing) clearTimeout(existing);
+  syncTimers.set(eventId, setTimeout(() => {
+    syncTimers.delete(eventId);
+    enqueue({ kind: 'event', eventId });
+  }, SYNC_DEBOUNCE_MS));
+}
+
+/** Force any debounced persist + sync to run now (page hide / unload). */
+function flushPending() {
+  if (persistTimer) { clearTimeout(persistTimer); persistTimer = null; persistLocal(); }
+  for (const [eventId, t] of syncTimers) { clearTimeout(t); enqueue({ kind: 'event', eventId }); }
+  syncTimers.clear();
 }
 
 export function updateEvent(eventId: string, fn: (event: RoundmarkEvent) => void) {
   let updated: RoundmarkEvent | undefined;
-  mutate((db) => {
+  applyMutation((db) => {
     const idx = db.events.findIndex((e) => e.id === eventId);
     if (idx === -1) return;
     const copy: RoundmarkEvent = JSON.parse(JSON.stringify(db.events[idx]));
@@ -263,7 +305,10 @@ export function updateEvent(eventId: string, fn: (event: RoundmarkEvent) => void
     db.events[idx] = copy;
     updated = copy;
   });
-  if (updated) enqueue({ kind: 'event', eventId });
+  if (updated) {
+    schedulePersist();
+    scheduleSync(eventId);
+  }
 }
 
 export function addAudit(entry: Omit<AuditEntry, 'id' | 'at'>) {
