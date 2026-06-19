@@ -257,13 +257,13 @@ export function updateEvent(eventId: string, fn: (event: RoundmarkEvent) => void
     db.events[idx] = copy;
     updated = copy;
   });
-  if (updated) void syncEventToSupabase(updated);
+  if (updated) enqueue({ kind: 'event', eventId });
 }
 
 export function addAudit(entry: Omit<AuditEntry, 'id' | 'at'>) {
   const full: AuditEntry = { ...entry, id: makeId(), at: new Date().toISOString() };
   mutate((db) => { db.auditLogs.unshift(full); });
-  void syncAuditToSupabase(full);
+  enqueue({ kind: 'audit', entry: full });
 }
 
 export function makeId(): string {
@@ -280,19 +280,16 @@ export function resetDemoData() {
 // Supabase write helpers (fire-and-forget from mutation functions)
 // ---------------------------------------------------------------------------
 
-async function syncEventToSupabase(event: RoundmarkEvent) {
-  if (!isSupabaseConfigured || !supabase) return;
-  // Demo events (demo-* ids) live only in localStorage — never push them.
-  if (event.id.startsWith('demo-')) return;
+/** Push an event's config + contacts + scorecards. Throws on the first error so
+ *  the outbox can retry. Demo events are local-only and resolve to a no-op. */
+async function pushEventToSupabase(event: RoundmarkEvent) {
+  if (!supabase || event.id.startsWith('demo-')) return;
 
-  // Only the owner can write the event config row.
+  // Only the owner can write the event config row + player contacts.
   if (currentUserId) {
-    const { error } = await supabase
-      .from('events')
-      .upsert(rowFromEvent(event, currentUserId));
-    if (error) console.error('[supabase] event upsert:', error.message);
+    const { error } = await supabase.from('events').upsert(rowFromEvent(event, currentUserId));
+    if (error) throw new Error(`event upsert: ${error.message}`);
 
-    // Player PII lives in an owner-only table, not the public event row.
     const contacts = event.players
       .filter((p) => p.email || p.phone || p.dietary)
       .map((p) => ({
@@ -304,22 +301,19 @@ async function syncEventToSupabase(event: RoundmarkEvent) {
       }));
     if (contacts.length) {
       const { error: cErr } = await supabase.from('event_player_contacts').upsert(contacts);
-      if (cErr) console.error('[supabase] contacts upsert:', cErr.message);
+      if (cErr) throw new Error(`contacts upsert: ${cErr.message}`);
     }
   }
 
   // Any scorer (anon) can write scorecards for live, unlocked events.
   for (const sc of Object.values(event.scorecards)) {
-    const { error } = await supabase
-      .from('scorecards')
-      .upsert(rowFromScorecard(event.id, sc));
-    if (error) console.error('[supabase] scorecard upsert:', error.message);
+    const { error } = await supabase.from('scorecards').upsert(rowFromScorecard(event.id, sc));
+    if (error) throw new Error(`scorecard upsert: ${error.message}`);
   }
 }
 
-async function syncAuditToSupabase(entry: AuditEntry) {
-  if (!isSupabaseConfigured || !supabase) return;
-  if (entry.eventId.startsWith('demo-')) return;
+async function pushAuditToSupabase(entry: AuditEntry) {
+  if (!supabase || entry.eventId.startsWith('demo-')) return;
   const { error } = await supabase.from('audit_logs').insert({
     event_id: entry.eventId,
     at: entry.at,
@@ -331,7 +325,136 @@ async function syncAuditToSupabase(entry: AuditEntry) {
     old_value: entry.oldValue ?? null,
     new_value: entry.newValue ?? null,
   });
-  if (error) console.error('[supabase] audit insert:', error.message);
+  if (error) throw new Error(`audit insert: ${error.message}`);
+}
+
+// ---------------------------------------------------------------------------
+// Outbox: durable, retrying write queue. Mutations enqueue an op; the drainer
+// re-derives the latest state from the cache and pushes it (idempotent upserts),
+// retrying on failure and surviving reloads. This stops a scorer on a flaky
+// connection from silently losing scores.
+// ---------------------------------------------------------------------------
+
+type OutboxOp =
+  | { id: string; kind: 'event'; eventId: string }
+  | { id: string; kind: 'audit'; entry: AuditEntry }
+  | { id: string; kind: 'registration'; regId: string };
+
+// Distributive omit so each union member keeps its own fields (plain Omit over a
+// union collapses to the shared keys only).
+type DistributiveOmit<T, K extends keyof T> = T extends unknown ? Omit<T, K> : never;
+type NewOutboxOp = DistributiveOmit<OutboxOp, 'id'>;
+
+const OUTBOX_KEY = 'roundmark-outbox-v1';
+let outbox: OutboxOp[] = [];
+let draining = false;
+let syncErrorMsg: string | null = null;
+let retryScheduled = false;
+const syncListeners = new Set<() => void>();
+
+// Stable snapshot so useSyncExternalStore doesn't loop (identity changes only
+// when pending/error actually change).
+let statusSnapshot: { pending: number; error: string | null } = { pending: 0, error: null };
+
+function refreshSnapshot() {
+  if (statusSnapshot.pending !== outbox.length || statusSnapshot.error !== syncErrorMsg) {
+    statusSnapshot = { pending: outbox.length, error: syncErrorMsg };
+  }
+}
+function emitSync() {
+  refreshSnapshot();
+  syncListeners.forEach((l) => l());
+}
+
+function loadOutbox() {
+  try {
+    outbox = JSON.parse(localStorage.getItem(OUTBOX_KEY) ?? '[]') as OutboxOp[];
+  } catch {
+    outbox = [];
+  }
+  refreshSnapshot();
+}
+function persistOutbox() {
+  try { localStorage.setItem(OUTBOX_KEY, JSON.stringify(outbox)); } catch { /* quota — keep in memory */ }
+}
+
+function opKey(op: OutboxOp): string {
+  return op.kind === 'event'
+    ? `event:${op.eventId}`
+    : op.kind === 'registration'
+      ? `reg:${op.regId}`
+      : `audit:${op.entry.id}`;
+}
+
+function enqueue(op: NewOutboxOp) {
+  if (!isSupabaseConfigured || !supabase) return;
+  const full = { ...op, id: makeId() } as OutboxOp;
+  // Collapse repeated writes to the same entity — the drainer always pushes the
+  // latest cached state, so only the most recent intent matters.
+  outbox = outbox.filter((o) => opKey(o) !== opKey(full));
+  outbox.push(full);
+  persistOutbox();
+  emitSync();
+  void drainOutbox();
+}
+
+async function runOp(op: OutboxOp): Promise<void> {
+  if (op.kind === 'event') {
+    const event = getDB().events.find((e) => e.id === op.eventId);
+    if (event) await pushEventToSupabase(event);
+  } else if (op.kind === 'audit') {
+    await pushAuditToSupabase(op.entry);
+  } else if (op.kind === 'registration') {
+    const reg = getDB().registrations.find((r) => r.id === op.regId);
+    if (reg && supabase && !reg.eventId.startsWith('demo-')) {
+      const { error } = await supabase.from('registrations').upsert(rowFromRegistration(reg));
+      if (error) throw new Error(`registration upsert: ${error.message}`);
+    }
+  }
+}
+
+async function drainOutbox(): Promise<void> {
+  if (draining || !isSupabaseConfigured || !supabase) return;
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
+  draining = true;
+  emitSync();
+  try {
+    while (outbox.length) {
+      try {
+        await runOp(outbox[0]);
+      } catch (e) {
+        syncErrorMsg = e instanceof Error ? e.message : 'sync failed';
+        scheduleRetry();
+        emitSync();
+        return;
+      }
+      outbox.shift();
+      persistOutbox();
+      syncErrorMsg = null;
+      emitSync();
+    }
+  } finally {
+    draining = false;
+    emitSync();
+  }
+}
+
+function scheduleRetry() {
+  if (retryScheduled) return;
+  retryScheduled = true;
+  setTimeout(() => { retryScheduled = false; void drainOutbox(); }, 5000);
+}
+
+export function getSyncStatus(): { pending: number; error: string | null } {
+  return statusSnapshot;
+}
+export function subscribeSync(cb: () => void): () => void {
+  syncListeners.add(cb);
+  return () => { syncListeners.delete(cb); };
+}
+/** Unsynced-writes status for a UI indicator. */
+export function useSyncStatus(): { pending: number; error: string | null } {
+  return useSyncExternalStore(subscribeSync, getSyncStatus, getSyncStatus);
 }
 
 // --- Registrations --------------------------------------------------------
@@ -408,11 +531,10 @@ export async function submitRegistration(
   return error?.message ?? null;
 }
 
-/** Push a registration status change (approve/decline) to Supabase. */
+/** Push a registration status change (approve/decline) — durable via the outbox. */
 export async function syncRegistration(reg: Registration) {
-  if (!isSupabaseConfigured || !supabase || reg.eventId.startsWith('demo-')) return;
-  const { error } = await supabase.from('registrations').upsert(rowFromRegistration(reg));
-  if (error) console.error('[supabase] registration upsert:', error.message);
+  if (reg.eventId.startsWith('demo-')) return;
+  enqueue({ kind: 'registration', regId: reg.id });
 }
 
 /** Owner-only: load an event's registrations into the local cache. */
@@ -553,8 +675,7 @@ export async function loadPlayerEvents() {
 
 /** Called from events.ts after createEvent / duplicateEvent to push to Supabase. */
 export function syncEvent(eventId: string) {
-  const event = getDB().events.find((e) => e.id === eventId);
-  if (event) void syncEventToSupabase(event);
+  enqueue({ kind: 'event', eventId });
 }
 
 /** Called from events.ts after deleteEvent to remove from Supabase. */
@@ -799,7 +920,19 @@ function startRealtime() {
         });
       },
     )
-    .subscribe();
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        // Reconnected — flush anything queued while offline.
+        void drainOutbox();
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+        // Drop the dead channel and resubscribe after a short backoff.
+        if (realtimeChannel && supabase) {
+          void supabase.removeChannel(realtimeChannel);
+          realtimeChannel = null;
+        }
+        setTimeout(() => startRealtime(), 3000);
+      }
+    });
 }
 
 // ---------------------------------------------------------------------------
@@ -884,8 +1017,16 @@ async function fetchProfile(userId: string): Promise<{ role: UserRole; plan: str
 export async function initStore() {
   // Load localStorage immediately so the UI renders on first frame.
   cache = loadLocal();
+  loadOutbox();
 
   if (!isSupabaseConfigured || !supabase) return;
+
+  // Flush any writes queued in a previous session, and retry whenever the
+  // browser regains connectivity.
+  void drainOutbox();
+  if (typeof window !== 'undefined') {
+    window.addEventListener('online', () => void drainOutbox());
+  }
 
   storeLoading = true;
   emitLoading();

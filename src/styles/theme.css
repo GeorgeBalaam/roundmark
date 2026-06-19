@@ -892,6 +892,7 @@ button { font-family: inherit; }
 svg.lucide { flex-shrink: 0; vertical-align: -0.125em; }
 .empty-state-icon { color: var(--rm-muted); line-height: 0; }
 .empty-state-icon svg { display: block; margin: 0 auto; }
+@keyframes rm-spin { to { transform: rotate(360deg); } }
 
 /* Event-setup step nav: full strip on desktop, compact header on mobile. */
 .stepper-desktop { display: none; }

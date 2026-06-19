@@ -6,6 +6,8 @@ import { initStore } from './lib/store';
 void initStore();
 import './styles/theme.css';
 import { ToastProvider } from './components/ui';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { SyncIndicator } from './components/SyncIndicator';
 import LoginPage, { RequireSession } from './pages/Login';
 import MarketingPage from './pages/Marketing';
 import DashboardPage from './pages/Dashboard';
@@ -90,8 +92,11 @@ const router = createBrowserRouter([
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ToastProvider>
-      <RouterProvider router={router} />
-    </ToastProvider>
+    <ErrorBoundary>
+      <ToastProvider>
+        <RouterProvider router={router} />
+        <SyncIndicator />
+      </ToastProvider>
+    </ErrorBoundary>
   </StrictMode>,
 );
