@@ -986,3 +986,88 @@ svg.lucide { flex-shrink: 0; vertical-align: -0.125em; }
   .stepper-desktop { display: flex; }
   .stepper-compact { display: none; }
 }
+
+/* ---------- Public event page: content blocks ---------- */
+
+/* Container query: feature tiles stack based on available width, so they also
+   stack correctly inside the narrow live-preview pane (not just on mobile). */
+.event-content { container-type: inline-size; }
+
+.event-feature {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-6);
+  align-items: center;
+}
+.event-feature img { margin: 0; }
+@container (max-width: 560px) {
+  .event-feature { grid-template-columns: 1fr; }
+  /* When stacked, always show the image first regardless of side. */
+  .event-feature.img-right > :first-child { order: 2; }
+  .event-feature.img-right > :last-child { order: 1; }
+}
+
+/* ---------- Event-page builder: editor + live preview ---------- */
+
+.page-builder {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-8);
+  align-items: start;
+}
+.page-builder-preview { display: none; }
+@media (min-width: 1100px) {
+  .page-builder { grid-template-columns: minmax(0, 1fr) 440px; }
+  .page-builder-preview {
+    display: block;
+    position: sticky;
+    top: var(--space-6);
+  }
+}
+.preview-frame {
+  border: 1px solid var(--rm-border);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+  background: #fff;
+}
+.preview-chrome {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 12px;
+  background: var(--rm-card-soft);
+  border-bottom: 1px solid var(--rm-border-soft);
+}
+.preview-chrome .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--rm-border);
+}
+.preview-chrome .preview-url {
+  margin-left: 8px;
+  font-size: 0.78rem;
+  color: var(--rm-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.preview-scroll {
+  max-height: 72vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+/* The preview renders the real page; scale down the .container padding so it
+   reads like a page rather than a cramped column. */
+.preview-scroll .container { padding-left: var(--space-5); padding-right: var(--space-5); }
+.preview-scroll h1 { font-size: 1.6rem; }
+.preview-stub {
+  margin: var(--space-6) var(--space-5) var(--space-8);
+  padding: var(--space-6);
+  border: 1.5px dashed var(--rm-border);
+  border-radius: var(--radius-card);
+  text-align: center;
+  color: var(--rm-muted);
+  font-size: 0.9rem;
+}

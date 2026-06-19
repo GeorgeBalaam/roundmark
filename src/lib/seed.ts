@@ -197,6 +197,20 @@ export function buildSeedDB(): RoundmarkDB {
         body: 'A relaxed 18 holes at Demo Fairway followed by lunch and prizes. Teams of four, Stableford scoring — every hole counts and a bad one never ruins your round. New to golf days? You\'ll be paired with experienced players.',
       },
       {
+        id: 'demo-bv',
+        type: 'venue',
+        title: 'Getting there',
+        address: 'Demo Fairway Golf Club\nFairway Lane, Demoshire DM1 2GC',
+      },
+      {
+        id: 'demo-bc',
+        type: 'cta',
+        title: 'Save the date',
+        body: 'Pop the day in your calendar so you don\'t miss your tee time.',
+        label: 'Add to calendar',
+        href: 'https://example.com',
+      },
+      {
         id: 'demo-b2',
         type: 'schedule',
         title: 'Running order',

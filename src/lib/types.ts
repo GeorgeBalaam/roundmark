@@ -148,9 +148,15 @@ export interface SideCompetitions {
 export interface ScheduleItem { id: string; time: string; label: string }
 export interface FaqItem { id: string; q: string; a: string }
 
+export type VideoProvider = 'youtube' | 'vimeo';
+
 export type EventBlock =
   | { id: string; type: 'text'; title?: string; body: string }
   | { id: string; type: 'image'; url: string; caption?: string }
+  | { id: string; type: 'feature'; title?: string; body: string; url?: string; imageSide: 'left' | 'right' }
+  | { id: string; type: 'cta'; title?: string; body?: string; label: string; href: string }
+  | { id: string; type: 'video'; provider: VideoProvider; videoId: string; title?: string }
+  | { id: string; type: 'venue'; title?: string; address: string; mapUrl?: string }
   | { id: string; type: 'schedule'; title?: string; items: ScheduleItem[] }
   | { id: string; type: 'faq'; title?: string; items: FaqItem[] };
 
@@ -159,6 +165,10 @@ export type EventBlockType = EventBlock['type'];
 export const EVENT_BLOCK_LABELS: Record<EventBlockType, string> = {
   text: 'Text section',
   image: 'Image',
+  feature: 'Text + image',
+  cta: 'Call to action',
+  video: 'Video',
+  venue: 'Venue & directions',
   schedule: 'Schedule',
   faq: 'FAQ',
 };
@@ -184,6 +194,8 @@ export interface RoundmarkEvent {
   logoUrl?: string;
   /** Optional hero background image for the public event page. */
   heroImageUrl?: string;
+  /** Optional one-line strapline shown under the date/venue on the public page. */
+  heroTagline?: string;
   /** Ordered content blocks for the public event microsite (/e/:id). */
   content?: EventBlock[];
   charityName?: string;

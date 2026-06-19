@@ -47,10 +47,11 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
   size?: ButtonSize;
   block?: boolean;
-  to?: string; // renders a router Link styled as a button
+  to?: string; // renders a router Link styled as a button (internal SPA nav)
+  href?: string; // renders a styled <a> that opens in a new tab (external)
 }
 
-export function Button({ variant = 'primary', size = 'md', block, to, className = '', children, ...rest }: ButtonProps) {
+export function Button({ variant = 'primary', size = 'md', block, to, href, className = '', children, ...rest }: ButtonProps) {
   const cls = [
     'btn',
     `btn-${variant}`,
@@ -60,6 +61,13 @@ export function Button({ variant = 'primary', size = 'md', block, to, className 
   ]
     .filter(Boolean)
     .join(' ');
+  if (href) {
+    return (
+      <a href={href} target="_blank" rel="noopener noreferrer" className={cls}>
+        {children}
+      </a>
+    );
+  }
   if (to) {
     return (
       <Link to={to} className={cls}>
