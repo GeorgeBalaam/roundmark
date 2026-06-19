@@ -9,6 +9,8 @@ import { useSyncExternalStore } from 'react';
 import type {
   AccountSettings,
   AuditEntry,
+  EventMembership,
+  Player,
   Registration,
   RegistrationSettings,
   RoundmarkDB,
@@ -117,7 +119,8 @@ function rowFromEvent(
     locked: event.locked,
     scoring_paused: event.scoringPaused,
     holes: event.holes,
-    players: event.players,
+    // Public row is PII-free: contact fields live in event_player_contacts.
+    players: event.players.map(({ email, phone, dietary, ...rest }) => rest),
     teams: event.teams,
     sponsors: event.sponsors,
     side_comps: event.sideComps,
@@ -153,6 +156,7 @@ function loadLocal(): RoundmarkDB {
       // Backfill fields added in later versions so older saved data stays valid.
       if (!db.registrations) db.registrations = [];
       if (!db.accountSettings) db.accountSettings = {};
+      if (!db.memberships) db.memberships = [];
       return db;
     }
   } catch {
@@ -287,6 +291,21 @@ async function syncEventToSupabase(event: RoundmarkEvent) {
       .from('events')
       .upsert(rowFromEvent(event, currentUserId));
     if (error) console.error('[supabase] event upsert:', error.message);
+
+    // Player PII lives in an owner-only table, not the public event row.
+    const contacts = event.players
+      .filter((p) => p.email || p.phone || p.dietary)
+      .map((p) => ({
+        event_id: event.id,
+        player_id: p.id,
+        email: p.email ?? null,
+        phone: p.phone ?? null,
+        dietary: p.dietary ?? null,
+      }));
+    if (contacts.length) {
+      const { error: cErr } = await supabase.from('event_player_contacts').upsert(contacts);
+      if (cErr) console.error('[supabase] contacts upsert:', cErr.message);
+    }
   }
 
   // Any scorer (anon) can write scorecards for live, unlocked events.
@@ -470,48 +489,64 @@ async function loadAccountSettings(userId: string) {
   mutate((db) => { db.accountSettings = settings; });
 }
 
-// --- Player events ----------------------------------------------------------
+// --- Player events / memberships --------------------------------------------
+
+export function useMemberships(): EventMembership[] {
+  const db = useDB();
+  return db.memberships ?? [];
+}
 
 /**
- * Fetch events where the current user appears as a player (by email).
- * Used for the /me player history dashboard. Merges into the local cache
- * without overwriting events already loaded as owner.
+ * Load the signed-in user's per-event memberships and the events they belong to
+ * (for the /me dashboard). First claims any unclaimed memberships by matching the
+ * user's account email to roster contacts, then loads memberships + their events.
+ * Replaces the old email-in-JSONB matching. Merges into the cache without
+ * overwriting events already loaded as owner.
  */
-export async function loadPlayerEvents(email: string) {
-  if (!isSupabaseConfigured || !supabase || !email) return;
+export async function loadPlayerEvents() {
+  if (!isSupabaseConfigured || !supabase || !currentUserId) return;
 
-  // JSONB containment: events.players @> '[{"email":"..."}]'
-  const { data, error } = await supabase
-    .from('events')
-    .select('*')
-    .filter('players', 'cs', JSON.stringify([{ email }]));
-  if (error || !data) return;
+  // Link this user to any roster players that share their account email.
+  await supabase.rpc('claim_memberships').then(({ error }) => {
+    if (error) console.error('[supabase] claim_memberships:', error.message);
+  });
 
-  const rows = data as Record<string, unknown>[];
-  const eventIds = rows.map((r) => r.id as string);
-  if (!eventIds.length) return;
+  const { data: memberRows, error } = await supabase
+    .from('event_members')
+    .select('event_id, role, player_id')
+    .eq('user_id', currentUserId);
+  if (error || !memberRows) return;
 
-  const { data: scRows } = await supabase
-    .from('scorecards')
-    .select('*')
-    .in('event_id', eventIds);
+  const memberships: EventMembership[] = memberRows.map((r: Record<string, unknown>) => ({
+    eventId: r.event_id as string,
+    role: (r.role as EventMembership['role']) ?? 'player',
+    playerId: (r.player_id as string | null) ?? undefined,
+  }));
+  mutate((db) => { db.memberships = memberships; });
+
+  // Load events the user is a member of but doesn't already have (e.g. as owner).
+  const have = new Set(getDB().events.map((e) => e.id));
+  const missingIds = [...new Set(memberships.map((m) => m.eventId))].filter((id) => !have.has(id));
+  if (!missingIds.length) return;
+
+  const [{ data: rows }, { data: scRows }] = await Promise.all([
+    supabase.from('events').select('*').in('id', missingIds),
+    supabase.from('scorecards').select('*').in('event_id', missingIds),
+  ]);
+  if (!rows) return;
 
   const scByEvent: Record<string, SupabaseScorecardRow[]> = {};
   for (const sc of scRows ?? []) {
     const eid = (sc as Record<string, string>).event_id;
-    if (!scByEvent[eid]) scByEvent[eid] = [];
-    scByEvent[eid].push(sc as SupabaseScorecardRow);
+    (scByEvent[eid] ??= []).push(sc as SupabaseScorecardRow);
   }
-
-  const playerEvents = rows.map((row) =>
+  const playerEvents = (rows as Record<string, unknown>[]).map((row) =>
     eventFromRow(row, scByEvent[row.id as string] ?? []),
   );
 
   mutate((db) => {
     for (const event of playerEvents) {
-      if (!db.events.some((e) => e.id === event.id)) {
-        db.events.push(event);
-      }
+      if (!db.events.some((e) => e.id === event.id)) db.events.push(event);
     }
   });
 }
@@ -610,6 +645,28 @@ async function loadEventsFromSupabase(userId: string) {
     oldValue: (r.old_value as string | null) ?? undefined,
     newValue: (r.new_value as string | null) ?? undefined,
   }));
+
+  // Merge owner-only PII (email/phone/dietary) back into the roster for the
+  // owner's own events, so the organiser UI still shows contact details.
+  if (eventIds.length) {
+    const { data: contactRows } = await supabase
+      .from('event_player_contacts')
+      .select('event_id, player_id, email, phone, dietary')
+      .in('event_id', eventIds);
+    const byEvent: Record<string, Record<string, Partial<Pick<Player, 'email' | 'phone' | 'dietary'>>>> = {};
+    for (const c of (contactRows ?? []) as Array<Record<string, string | null>>) {
+      const eid = c.event_id as string;
+      (byEvent[eid] ??= {})[c.player_id as string] = {
+        email: c.email ?? undefined,
+        phone: c.phone ?? undefined,
+        dietary: c.dietary ?? undefined,
+      };
+    }
+    for (const ev of supabaseEvents) {
+      const m = byEvent[ev.id];
+      if (m) ev.players = ev.players.map((p) => (m[p.id] ? { ...p, ...m[p.id] } : p));
+    }
+  }
 
   mutate((db) => {
     // Demo events are static sample data: always sourced fresh from the seed and
@@ -714,8 +771,16 @@ function startRealtime() {
           const idx = db.events.findIndex((e) => e.id === (row.id as string));
           if (idx === -1) return;
           const existing = db.events[idx];
+          const incoming = eventFromRow(row, []);
+          // The broadcast row is PII-free; preserve any contact fields we already
+          // hold in memory (owner view) by matching player id.
+          const piiById = new Map(existing.players.map((p) => [p.id, p]));
+          incoming.players = incoming.players.map((p) => {
+            const prev = piiById.get(p.id);
+            return prev ? { ...p, email: prev.email, phone: prev.phone, dietary: prev.dietary } : p;
+          });
           // Merge scalar fields; keep in-memory scorecards (separate table).
-          db.events[idx] = { ...eventFromRow(row, []), scorecards: existing.scorecards };
+          db.events[idx] = { ...incoming, scorecards: existing.scorecards };
         });
       },
     )
@@ -795,16 +860,21 @@ export function useEntitlements(): Entitlements {
   return entitlementsFor(db.session?.plan);
 }
 
-/** Fetch the signed-in user's role from their profile row. */
-async function fetchRole(userId: string): Promise<UserRole> {
-  if (!supabase) return 'organiser';
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', userId)
-    .single();
-  if (error || !data) return 'organiser';
-  return (data.role as UserRole) ?? 'organiser';
+/** Fetch the signed-in user's role + entitlements plan from their profile row. */
+async function fetchProfile(userId: string): Promise<{ role: UserRole; plan: string }> {
+  if (!supabase) return { role: 'organiser', plan: 'full' };
+  // Resilient to the `plan` column not existing yet (deploy before migration):
+  // fall back to selecting role only so the admin role is never lost.
+  let row = await supabase.from('profiles').select('role, plan').eq('id', userId).single();
+  if (row.error) {
+    row = await supabase.from('profiles').select('role').eq('id', userId).single();
+  }
+  const data = row.data as { role?: string; plan?: string } | null;
+  if (!data) return { role: 'organiser', plan: 'full' };
+  return {
+    role: (data.role as UserRole) ?? 'organiser',
+    plan: data.plan ?? 'full',
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -846,15 +916,18 @@ export async function initStore() {
   }
 }
 
-/** Set up the signed-in user: resolve role, set session, load their events. */
+/** Set up the signed-in user: resolve role + plan, set session, load events,
+ *  account settings, and per-event memberships (for the /me dashboard). */
 async function hydrateUser(userId: string, email: string | undefined) {
   currentUserId = userId;
-  currentRole = await fetchRole(userId);
+  const { role, plan } = await fetchProfile(userId);
+  currentRole = role;
   mutate((db) => {
-    db.session = { organiserName: email ?? 'Organiser', role: currentRole };
+    db.session = { organiserName: email ?? 'Organiser', role, plan };
   });
   await Promise.all([
     loadEventsFromSupabase(userId),
     loadAccountSettings(userId),
+    loadPlayerEvents(),
   ]);
 }

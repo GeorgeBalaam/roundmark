@@ -32,6 +32,7 @@ export interface Player {
   /** Playing handicap. null/undefined = not provided. */
   handicap?: number | null;
   dietary?: string;
+  phone?: string;
   role?: 'host' | 'guest' | null;
 }
 
@@ -191,12 +192,24 @@ export interface AccountSettings {
   defaultLogoUrl?: string;
 }
 
+/** A signed-in user's role on a specific event (per-event, not global). */
+export type EventRole = 'organiser' | 'host' | 'scorer' | 'player';
+
+export interface EventMembership {
+  eventId: string;
+  role: EventRole;
+  /** The roster player this user is, if linked. */
+  playerId?: string;
+}
+
 export interface RoundmarkDB {
   version: number;
   events: RoundmarkEvent[];
   auditLogs: AuditEntry[];
   /** Event sign-ups (separate from players — see RegistrationStatus). */
   registrations: Registration[];
+  /** The signed-in user's per-event memberships (drives the /me dashboard). */
+  memberships?: EventMembership[];
   /**
    * Signed-in user. role drives which dashboard + features they get; plan is the
    * entitlements bundle id (undefined = the default 'full' plan for now).

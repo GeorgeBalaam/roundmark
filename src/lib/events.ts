@@ -239,6 +239,7 @@ export function approveRegistration(registrationId: string, by: string) {
     company: reg.company || undefined,
     handicap: reg.handicap ?? null,
     dietary: reg.dietary || undefined,
+    phone: reg.phone || undefined,
     role: 'guest',
   };
 

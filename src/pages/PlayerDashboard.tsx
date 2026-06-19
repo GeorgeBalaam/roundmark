@@ -15,7 +15,7 @@ import {
 } from '../components/ui';
 import { EventIcon } from '../lib/icons';
 import { computePlayerStandings, formatToPar } from '../lib/scoring';
-import { loadPlayerEvents, useDB, useSession, useStoreLoading } from '../lib/store';
+import { loadPlayerEvents, useDB, useMemberships, useSession, useStoreLoading } from '../lib/store';
 import type { RoundmarkEvent } from '../lib/types';
 import { FORMAT_LABELS } from '../lib/types';
 
@@ -28,10 +28,8 @@ function formatDate(iso: string): string {
   });
 }
 
-function PlayerEventCard({ event, email }: { event: RoundmarkEvent; email: string }) {
-  const player = event.players.find(
-    (p) => p.email?.toLowerCase() === email.toLowerCase(),
-  );
+function PlayerEventCard({ event, playerId }: { event: RoundmarkEvent; playerId?: string }) {
+  const player = playerId ? event.players.find((p) => p.id === playerId) : undefined;
   const team = player
     ? event.teams.find((t) => t.playerIds.includes(player.id))
     : undefined;
@@ -95,36 +93,35 @@ function PlayerEventCard({ event, email }: { event: RoundmarkEvent; email: strin
 export default function PlayerDashboardPage() {
   const db = useDB();
   const session = useSession();
+  const memberships = useMemberships();
   const loading = useStoreLoading();
-  const email = session?.organiserName ?? '';
+  const signedIn = !!session;
 
   useEffect(() => {
-    if (email) void loadPlayerEvents(email);
-  }, [email]);
+    if (signedIn) void loadPlayerEvents();
+  }, [signedIn]);
 
-  // All events where this user is listed as a player.
+  // The roster player this user is, per event (from their memberships).
+  const playerIdByEvent = new Map(memberships.map((m) => [m.eventId, m.playerId]));
+
+  // All events this user is a member of.
   const myEvents = db.events
-    .filter((e) =>
-      e.players.some((p) => p.email?.toLowerCase() === email.toLowerCase()),
-    )
+    .filter((e) => playerIdByEvent.has(e.id))
     .sort((a, b) => b.date.localeCompare(a.date));
 
   // Summary stats.
   const played = myEvents.filter((e) => e.status !== 'draft').length;
   const completed = myEvents.filter((e) => e.status === 'completed' || e.locked).length;
 
-  // Best stableford score across completed events (for a quick headline stat).
+  // Best stableford score across events (for a quick headline stat).
   let bestScore: { value: number; label: string } | null = null;
   for (const event of myEvents) {
     if (event.format !== 'stableford') continue;
-    const standings = computePlayerStandings(event);
-    const me = standings.find(
-      (s) => event.players.find((p) => p.id === s.playerId)?.email?.toLowerCase() === email.toLowerCase(),
-    );
-    if (me && me.thru > 0) {
-      if (!bestScore || me.value > bestScore.value) {
-        bestScore = { value: me.value, label: 'pts (best round)' };
-      }
+    const playerId = playerIdByEvent.get(event.id);
+    if (!playerId) continue;
+    const me = computePlayerStandings(event).find((s) => s.playerId === playerId);
+    if (me && me.thru > 0 && (!bestScore || me.value > bestScore.value)) {
+      bestScore = { value: me.value, label: 'pts (best round)' };
     }
   }
 
@@ -163,7 +160,7 @@ export default function PlayerDashboardPage() {
 
           <div className="grid-cards">
             {myEvents.map((event) => (
-              <PlayerEventCard key={event.id} event={event} email={email} />
+              <PlayerEventCard key={event.id} event={event} playerId={playerIdByEvent.get(event.id)} />
             ))}
           </div>
         </>
