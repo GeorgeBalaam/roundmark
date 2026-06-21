@@ -251,6 +251,8 @@ export interface RoundmarkDB {
   registrations: Registration[];
   /** The signed-in user's per-event memberships (drives the /me dashboard). */
   memberships?: EventMembership[];
+  /** Event ids the signed-in user holds a go-live pass for (entitlements). */
+  eventPasses?: string[];
   /**
    * Signed-in user. role drives which dashboard + features they get; plan is the
    * entitlements bundle id (undefined = the default 'full' plan for now).

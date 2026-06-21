@@ -19,7 +19,7 @@ import type {
   UserRole,
 } from './types';
 import { buildSeedDB } from './seed';
-import { entitlementsFor, type Entitlements } from './entitlements';
+import { entitlementsFor, canGoLive as resolveCanGoLive, type Entitlements } from './entitlements';
 import { supabase, isSupabaseConfigured } from './supabase';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
@@ -164,6 +164,7 @@ function loadLocal(): RoundmarkDB {
       if (!db.registrations) db.registrations = [];
       if (!db.accountSettings) db.accountSettings = {};
       if (!db.memberships) db.memberships = [];
+      if (!db.eventPasses) db.eventPasses = [];
       return db;
     }
   } catch {
@@ -1050,6 +1051,44 @@ export function useEntitlements(): Entitlements {
   return entitlementsFor(db.session?.plan);
 }
 
+/** Whether this event can be taken live (account plan grants it, or it has a pass). */
+export function useCanGoLive(event: RoundmarkEvent): boolean {
+  const db = useDB();
+  const hasPass = (db.eventPasses ?? []).includes(event.id);
+  return resolveCanGoLive(db.session?.plan, hasPass);
+}
+
+/** Load the user's go-live passes (event ids) into the store. */
+export async function loadEventPasses() {
+  if (!isSupabaseConfigured || !supabase || !currentUserId) return;
+  const { data, error } = await supabase.from('event_passes').select('event_id').eq('user_id', currentUserId);
+  if (error || !data) return;
+  mutate((db) => { db.eventPasses = data.map((r) => r.event_id as string); });
+}
+
+/**
+ * Grant a go-live pass for one event. Placeholder for the Stripe purchase flow —
+ * today it just unlocks; later this runs after a successful checkout.
+ */
+export async function grantEventPass(eventId: string): Promise<string | null> {
+  if (!isSupabaseConfigured || !supabase || !currentUserId) {
+    mutate((db) => { db.eventPasses = [...new Set([...(db.eventPasses ?? []), eventId])]; });
+    return null;
+  }
+  const { error } = await supabase.from('event_passes').upsert({ event_id: eventId, user_id: currentUserId, source: 'manual' });
+  if (error) return error.message;
+  mutate((db) => { db.eventPasses = [...new Set([...(db.eventPasses ?? []), eventId])]; });
+  return null;
+}
+
+/** Upgrade the account to the annual plan. Placeholder for the subscription flow. */
+export async function upgradeToAnnual(): Promise<string | null> {
+  mutate((db) => { if (db.session) db.session = { ...db.session, plan: 'annual' }; });
+  if (!isSupabaseConfigured || !supabase || !currentUserId) return null;
+  const { error } = await supabase.from('profiles').update({ plan: 'annual' }).eq('id', currentUserId);
+  return error ? error.message : null;
+}
+
 /** Fetch the signed-in user's role + entitlements plan from their profile row. */
 async function fetchProfile(userId: string): Promise<{ role: UserRole; plan: string }> {
   if (!supabase) return { role: 'organiser', plan: 'full' };
@@ -1127,5 +1166,6 @@ async function hydrateUser(userId: string, email: string | undefined) {
     loadEventsFromSupabase(userId),
     loadAccountSettings(userId),
     loadPlayerEvents(),
+    loadEventPasses(),
   ]);
 }

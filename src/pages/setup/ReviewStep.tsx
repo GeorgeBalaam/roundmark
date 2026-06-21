@@ -3,16 +3,31 @@
 import { useState } from 'react';
 import { Badge, Button, Card, ConfirmDialog, EventStatusBadge } from '../../components/ui';
 import { useToast } from '../../components/toast-context';
-import { CheckIcon, TodoIcon, GoLiveIcon, ICON_SM } from '../../lib/icons';
+import { CheckIcon, TodoIcon, GoLiveIcon, LockIcon, ICON_SM } from '../../lib/icons';
 import { eventChecklist } from '../../lib/events';
-import { addAudit, updateEvent } from '../../lib/store';
+import { addAudit, updateEvent, useCanGoLive, grantEventPass, upgradeToAnnual } from '../../lib/store';
 import type { EventStatus, RoundmarkEvent } from '../../lib/types';
 import { EVENT_TYPE_LABELS, FORMAT_LABELS } from '../../lib/types';
 
 export default function ReviewStep({ event }: { event: RoundmarkEvent }) {
   const toast = useToast();
   const [confirmLive, setConfirmLive] = useState(false);
+  const [unlocking, setUnlocking] = useState(false);
+  const canLive = useCanGoLive(event);
   const { items, ready } = eventChecklist(event);
+
+  async function buyPass() {
+    setUnlocking(true);
+    const err = await grantEventPass(event.id);
+    setUnlocking(false);
+    toast(err ? `Couldn't unlock: ${err}` : 'Event unlocked — you can go live now', err ? 'error' : 'success');
+  }
+  async function goAnnual() {
+    setUnlocking(true);
+    const err = await upgradeToAnnual();
+    setUnlocking(false);
+    toast(err ? `Couldn't upgrade: ${err}` : 'Upgraded to Annual — all your events can go live', err ? 'error' : 'success');
+  }
 
   function setStatus(status: EventStatus, message: string) {
     updateEvent(event.id, (e) => {
@@ -80,7 +95,7 @@ export default function ReviewStep({ event }: { event: RoundmarkEvent }) {
             </Button>
           </>
         )}
-        {event.status === 'ready' && (
+        {event.status === 'ready' && canLive && (
           <>
             <p className="text-muted">
               Going live opens scoring for every team link and starts the public leaderboard.
@@ -92,6 +107,27 @@ export default function ReviewStep({ event }: { event: RoundmarkEvent }) {
               </Button>
             </div>
           </>
+        )}
+        {event.status === 'ready' && !canLive && (
+          <div className="stack-4">
+            <div className="row" style={{ gap: 'var(--space-3)', alignItems: 'center' }}>
+              <LockIcon size={ICON_SM} />
+              <strong style={{ fontFamily: 'var(--font-heading)' }}>Unlock this event to go live</strong>
+            </div>
+            <p className="text-muted" style={{ margin: 0 }}>
+              Everything's built and ready. Take it live to open team scoring, the public
+              leaderboard and TV mode — buy a one-off Event Pass for this day, or go unlimited
+              with Annual.
+            </p>
+            <div className="row" style={{ flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+              <Button onClick={buyPass} disabled={unlocking}><GoLiveIcon size={ICON_SM} /> Buy Event Pass</Button>
+              <Button variant="secondary" onClick={goAnnual} disabled={unlocking}>Upgrade to Annual</Button>
+              <Button variant="ghost" onClick={() => setStatus('draft', 'Event moved back to draft')}>Back to draft</Button>
+            </div>
+            <p className="text-small text-muted" style={{ margin: 0 }}>
+              Payment isn't wired up yet — these unlock instantly for now.
+            </p>
+          </div>
         )}
         {event.status === 'live' && (
           <>
