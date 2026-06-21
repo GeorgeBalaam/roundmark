@@ -1057,11 +1057,18 @@ svg.lucide { flex-shrink: 0; vertical-align: -0.125em; }
   max-height: 72vh;
   overflow-y: auto;
   overflow-x: hidden;
+  background: var(--rm-card-soft);
 }
-/* The preview renders the real page; scale down the .container padding so it
-   reads like a page rather than a cramped column. */
-.preview-scroll .container { padding-left: var(--space-5); padding-right: var(--space-5); }
-.preview-scroll h1 { font-size: 1.6rem; }
+/* The preview renders the real page inside a fixed-width canvas, then scales it
+   down with `zoom` so the chosen device's true layout fits the narrow pane.
+   Container queries on the page read the canvas's unscaled width, so each
+   device shows the correct layout automatically. */
+.preview-canvas { margin: 0 auto; }
+.device-desktop .preview-canvas { width: 1180px; zoom: 0.35; }
+.device-mobile .preview-canvas { width: 390px; zoom: 1; box-shadow: 0 0 0 1px var(--rm-border-soft); }
+/* Mobile-only legibility nudges (desktop relies on the page's real sizing). */
+.device-mobile .preview-canvas .container { padding-left: var(--space-5); padding-right: var(--space-5); }
+.device-mobile .preview-canvas h1 { font-size: 1.6rem; }
 .preview-stub {
   margin: var(--space-6) var(--space-5) var(--space-8);
   padding: var(--space-6);
@@ -1071,3 +1078,106 @@ svg.lucide { flex-shrink: 0; vertical-align: -0.125em; }
   color: var(--rm-muted);
   font-size: 0.9rem;
 }
+
+/* Device toggle (segmented control above the preview frame) */
+.device-toggle {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--rm-card-soft);
+  border: 1px solid var(--rm-border-soft);
+  border-radius: 999px;
+}
+.device-toggle button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border: none;
+  background: none;
+  border-radius: 999px;
+  font-family: var(--font-heading);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--rm-muted);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.device-toggle button.active { background: var(--rm-card); color: var(--rm-ink); box-shadow: var(--shadow-sm); }
+
+/* ---------- Event-page builder: block cards ---------- */
+
+.block-card { padding: var(--space-4) var(--space-5); }
+.block-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.block-head-main {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  padding: 4px 0;
+  cursor: pointer;
+  text-align: left;
+  color: var(--rm-ink);
+}
+.block-head-icon { color: var(--rm-green-fairway); flex-shrink: 0; }
+.block-head-text { display: flex; align-items: baseline; gap: var(--space-3); min-width: 0; }
+.block-head-title {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.block-head-tag {
+  flex-shrink: 0;
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--rm-muted);
+}
+.block-head-chev { color: var(--rm-muted); transition: transform 0.18s ease; flex-shrink: 0; }
+.block-head-actions { flex-shrink: 0; }
+
+/* ---------- Event-page builder: add-section grid ---------- */
+
+.block-add-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--space-3);
+}
+.block-add-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--space-4);
+  border: 1px solid var(--rm-border-soft);
+  border-radius: var(--radius-sm);
+  background: var(--rm-card);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.05s ease;
+}
+.block-add-tile:hover { border-color: var(--rm-green-fairway); background: rgba(141, 178, 89, 0.07); }
+.block-add-tile:active { transform: translateY(1px); }
+.block-add-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(141, 178, 89, 0.16);
+  color: var(--rm-green-deep);
+  margin-bottom: 2px;
+}
+.block-add-name { font-family: var(--font-heading); font-weight: 600; font-size: 0.9rem; }
+.block-add-desc { font-size: 0.78rem; color: var(--rm-muted); line-height: 1.35; }

@@ -4,19 +4,38 @@
 // so it can never drift from production. Everything saves on change.
 
 import { useState } from 'react';
+import type { LucideIcon } from 'lucide-react';
 import { Button, Card, FormField, SelectField, SponsorStrip, TextAreaField } from '../../components/ui';
 import { ImageUpload } from '../../components/ImageUpload';
 import { EventPageHero } from '../../components/EventPageHero';
 import { EventContent } from '../../components/EventContent';
 import {
-  AddIcon, CloseIcon, MoveUpIcon, MoveDownIcon, EventIcon, ICON_SM,
+  AddIcon, CloseIcon, MoveUpIcon, MoveDownIcon, EventIcon, DisclosureIcon, DuplicateIcon,
+  DesktopIcon, MobileIcon, TextBlockIcon, ImageBlockIcon, FeatureBlockIcon, ButtonBlockIcon,
+  VideoBlockIcon, MapPinIcon, ScheduleBlockIcon, FaqBlockIcon, ICON_SM,
 } from '../../lib/icons';
 import { makeId, updateEvent } from '../../lib/store';
 import { eventLandingUrl, eventLandingPath } from '../../lib/links';
 import { eventThemeVars } from '../../lib/theme';
 import { parseVideoUrl } from '../../lib/video';
 import type { EventBlock, EventBlockType, RoundmarkEvent } from '../../lib/types';
-import { EVENT_BLOCK_LABELS } from '../../lib/types';
+import { EVENT_BLOCK_META } from '../../lib/types';
+
+const BLOCK_ICONS: Record<EventBlockType, LucideIcon> = {
+  text: TextBlockIcon,
+  feature: FeatureBlockIcon,
+  image: ImageBlockIcon,
+  cta: ButtonBlockIcon,
+  video: VideoBlockIcon,
+  venue: MapPinIcon,
+  schedule: ScheduleBlockIcon,
+  faq: FaqBlockIcon,
+};
+
+// Order shown in the "Add a section" grid.
+const BLOCK_PALETTE: EventBlockType[] = ['text', 'feature', 'image', 'cta', 'video', 'venue', 'schedule', 'faq'];
+
+type PreviewDevice = 'desktop' | 'mobile';
 
 function newBlock(type: EventBlockType): EventBlock {
   const id = makeId();
@@ -32,10 +51,25 @@ function newBlock(type: EventBlockType): EventBlock {
   }
 }
 
-const BLOCK_PALETTE: EventBlockType[] = ['text', 'feature', 'image', 'cta', 'video', 'venue', 'schedule', 'faq'];
+/** Short summary shown in a collapsed block's header, so a long page stays scannable. */
+function blockSummary(block: EventBlock): string {
+  if ('title' in block && block.title?.trim()) return block.title.trim();
+  switch (block.type) {
+    case 'text': return block.body.trim() || 'Empty text';
+    case 'feature': return block.body.trim() || 'Text + image';
+    case 'image': return block.caption?.trim() || 'Image';
+    case 'cta': return block.label.trim() || 'Button';
+    case 'video': return block.videoId ? 'Video linked' : 'No video yet';
+    case 'venue': return block.address.trim().split('\n')[0] || 'Venue';
+    case 'schedule': return `${block.items.length} time${block.items.length === 1 ? '' : 's'}`;
+    case 'faq': return `${block.items.length} question${block.items.length === 1 ? '' : 's'}`;
+  }
+}
 
 export default function PageStep({ event }: { event: RoundmarkEvent }) {
   const blocks = event.content ?? [];
+  const [device, setDevice] = useState<PreviewDevice>('desktop');
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
   function setBlocks(next: EventBlock[]) {
     updateEvent(event.id, (e) => { e.content = next; });
@@ -52,6 +86,25 @@ export default function PageStep({ event }: { event: RoundmarkEvent }) {
     const next = [...blocks];
     [next[i], next[j]] = [next[j], next[i]];
     setBlocks(next);
+  }
+  function duplicate(id: string) {
+    const i = blocks.findIndex((b) => b.id === id);
+    if (i === -1) return;
+    const clone: EventBlock = JSON.parse(JSON.stringify(blocks[i]));
+    clone.id = makeId();
+    // Regenerate nested item ids so React keys (and future edits) stay unique.
+    if (clone.type === 'schedule') clone.items = clone.items.map((it) => ({ ...it, id: makeId() }));
+    else if (clone.type === 'faq') clone.items = clone.items.map((it) => ({ ...it, id: makeId() }));
+    const next = [...blocks];
+    next.splice(i + 1, 0, clone);
+    setBlocks(next);
+  }
+  function toggleCollapsed(id: string) {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
   }
 
   return (
@@ -94,67 +147,109 @@ export default function PageStep({ event }: { event: RoundmarkEvent }) {
         {blocks.length === 0 && (
           <Card soft style={{ textAlign: 'center' }}>
             <p className="text-muted" style={{ margin: 0 }}>
-              No sections yet. Add a welcome message, a text + image tile, the day's schedule, photos, a video or FAQs below.
+              No sections yet. Pick one below to start building your page.
             </p>
           </Card>
         )}
 
         <div className="stack-4">
-          {blocks.map((block, i) => (
-            <Card key={block.id}>
-              <div className="row-between" style={{ marginBottom: 'var(--space-3)' }}>
-                <span className="text-small" style={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--rm-muted)' }}>
-                  {EVENT_BLOCK_LABELS[block.type]}
-                </span>
-                <div className="row">
-                  <Button size="sm" variant="ghost" disabled={i === 0} onClick={() => move(block.id, -1)} aria-label="Move up">
-                    <MoveUpIcon size={ICON_SM} />
-                  </Button>
-                  <Button size="sm" variant="ghost" disabled={i === blocks.length - 1} onClick={() => move(block.id, 1)} aria-label="Move down">
-                    <MoveDownIcon size={ICON_SM} />
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => remove(block.id)} aria-label="Remove section">
-                    <CloseIcon size={ICON_SM} />
-                  </Button>
+          {blocks.map((block, i) => {
+            const Icon = BLOCK_ICONS[block.type];
+            const isCollapsed = collapsed.has(block.id);
+            return (
+              <Card key={block.id} className="block-card">
+                <div className="block-head">
+                  <button
+                    type="button"
+                    className="block-head-main"
+                    onClick={() => toggleCollapsed(block.id)}
+                    aria-expanded={!isCollapsed}
+                  >
+                    <Icon size={ICON_SM} className="block-head-icon" aria-hidden="true" />
+                    <span className="block-head-text">
+                      <span className="block-head-title">{blockSummary(block)}</span>
+                      <span className="block-head-tag">{EVENT_BLOCK_META[block.type].label}</span>
+                    </span>
+                    <DisclosureIcon
+                      size={ICON_SM}
+                      aria-hidden="true"
+                      className="block-head-chev"
+                      style={{ transform: isCollapsed ? 'none' : 'rotate(180deg)' }}
+                    />
+                  </button>
+                  <div className="row block-head-actions">
+                    <Button size="sm" variant="ghost" disabled={i === 0} onClick={() => move(block.id, -1)} aria-label="Move up">
+                      <MoveUpIcon size={ICON_SM} />
+                    </Button>
+                    <Button size="sm" variant="ghost" disabled={i === blocks.length - 1} onClick={() => move(block.id, 1)} aria-label="Move down">
+                      <MoveDownIcon size={ICON_SM} />
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => duplicate(block.id)} aria-label="Duplicate section">
+                      <DuplicateIcon size={ICON_SM} />
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => remove(block.id)} aria-label="Remove section">
+                      <CloseIcon size={ICON_SM} />
+                    </Button>
+                  </div>
                 </div>
-              </div>
-              <BlockEditor block={block} eventId={event.id} onChange={replace} />
-            </Card>
-          ))}
+                {!isCollapsed && (
+                  <div style={{ marginTop: 'var(--space-4)' }}>
+                    <BlockEditor block={block} eventId={event.id} onChange={replace} />
+                  </div>
+                )}
+              </Card>
+            );
+          })}
         </div>
 
         <Card soft>
-          <div className="text-small" style={{ fontWeight: 600, marginBottom: 'var(--space-3)' }}>Add a section</div>
-          <div className="row" style={{ flexWrap: 'wrap' }}>
-            {BLOCK_PALETTE.map((t) => (
-              <Button key={t} size="sm" variant="secondary" onClick={() => add(t)}>
-                <AddIcon size={ICON_SM} /> {EVENT_BLOCK_LABELS[t]}
-              </Button>
-            ))}
+          <div className="text-small" style={{ fontWeight: 600, marginBottom: 'var(--space-4)' }}>Add a section</div>
+          <div className="block-add-grid">
+            {BLOCK_PALETTE.map((t) => {
+              const Icon = BLOCK_ICONS[t];
+              const meta = EVENT_BLOCK_META[t];
+              return (
+                <button key={t} type="button" className="block-add-tile" onClick={() => add(t)}>
+                  <span className="block-add-icon"><Icon size={ICON_SM} aria-hidden="true" /></span>
+                  <span className="block-add-name">{meta.label}</span>
+                  <span className="block-add-desc">{meta.description}</span>
+                </button>
+              );
+            })}
           </div>
         </Card>
       </div>
 
       {/* Live preview column (desktop only) */}
       <div className="page-builder-preview">
-        <div className="text-small" style={{ fontWeight: 600, marginBottom: 'var(--space-3)', color: 'var(--rm-muted)' }}>
-          Live preview
+        <div className="row-between" style={{ marginBottom: 'var(--space-3)' }}>
+          <div className="text-small" style={{ fontWeight: 600, color: 'var(--rm-muted)' }}>Live preview</div>
+          <div className="device-toggle" role="group" aria-label="Preview device">
+            <button type="button" className={device === 'desktop' ? 'active' : ''} aria-pressed={device === 'desktop'} onClick={() => setDevice('desktop')}>
+              <DesktopIcon size={ICON_SM} /> Desktop
+            </button>
+            <button type="button" className={device === 'mobile' ? 'active' : ''} aria-pressed={device === 'mobile'} onClick={() => setDevice('mobile')}>
+              <MobileIcon size={ICON_SM} /> Mobile
+            </button>
+          </div>
         </div>
         <div className="preview-frame">
           <div className="preview-chrome">
             <span className="dot" /><span className="dot" /><span className="dot" />
             <span className="preview-url">{eventLandingPath(event.id)}</span>
           </div>
-          <div className="preview-scroll" style={{ ...eventThemeVars(event), background: 'var(--rm-bg)' }}>
-            <EventPageHero event={event} preview />
-            <div className="container" style={{ maxWidth: 720, paddingTop: 'var(--space-6)' }}>
-              {event.registration?.note && (
-                <p style={{ textAlign: 'center', marginBottom: 'var(--space-6)' }}>{event.registration.note}</p>
-              )}
-              <EventContent blocks={blocks} />
-              {event.sponsors.length > 0 && <SponsorStrip sponsors={event.sponsors} />}
+          <div className={`preview-scroll device-${device}`}>
+            <div className="preview-canvas" style={{ ...eventThemeVars(event), background: 'var(--rm-bg)' }}>
+              <EventPageHero event={event} preview />
+              <div className="container" style={{ maxWidth: 720, paddingTop: 'var(--space-6)' }}>
+                {event.registration?.note && (
+                  <p style={{ textAlign: 'center', marginBottom: 'var(--space-6)' }}>{event.registration.note}</p>
+                )}
+                <EventContent blocks={blocks} />
+                {event.sponsors.length > 0 && <SponsorStrip sponsors={event.sponsors} />}
+              </div>
+              <div className="preview-stub">Registration form appears here (configured on the Sign-ups step).</div>
             </div>
-            <div className="preview-stub">Registration form appears here (configured on the Sign-ups step).</div>
           </div>
         </div>
       </div>

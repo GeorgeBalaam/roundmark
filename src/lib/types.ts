@@ -162,15 +162,16 @@ export type EventBlock =
 
 export type EventBlockType = EventBlock['type'];
 
-export const EVENT_BLOCK_LABELS: Record<EventBlockType, string> = {
-  text: 'Text section',
-  image: 'Image',
-  feature: 'Text + image',
-  cta: 'Call to action',
-  video: 'Video',
-  venue: 'Venue & directions',
-  schedule: 'Schedule',
-  faq: 'FAQ',
+/** Builder metadata for each block type: short name + one-line description. */
+export const EVENT_BLOCK_META: Record<EventBlockType, { label: string; description: string }> = {
+  text: { label: 'Text', description: 'A heading and a paragraph.' },
+  feature: { label: 'Text + image', description: 'A paragraph beside an image.' },
+  image: { label: 'Image', description: 'A full-width image with a caption.' },
+  cta: { label: 'Button', description: 'A heading and a button — e.g. donate.' },
+  video: { label: 'Video', description: 'Embed a YouTube or Vimeo clip.' },
+  venue: { label: 'Venue & map', description: 'An address with a directions link.' },
+  schedule: { label: 'Schedule', description: 'A timeline of the day.' },
+  faq: { label: 'FAQs', description: 'Expandable questions and answers.' },
 };
 
 export interface RoundmarkEvent {

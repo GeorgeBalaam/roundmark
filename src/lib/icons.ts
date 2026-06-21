@@ -66,4 +66,18 @@ export {
   Smartphone as MobileIcon,
   BarChart3 as LeaderboardIcon,
   ShieldCheck as SecureIcon,
+
+  // Event-page builder: block-type glyphs
+  Type as TextBlockIcon,
+  Image as ImageBlockIcon,
+  Columns2 as FeatureBlockIcon, // text beside an image
+  MousePointerClick as ButtonBlockIcon, // CTA
+  Video as VideoBlockIcon,
+  MapPin as MapPinIcon, // venue
+  Clock as ScheduleBlockIcon,
+  HelpCircle as FaqBlockIcon,
+
+  // Event-page builder: preview device toggle + block actions
+  Monitor as DesktopIcon, // mobile uses MobileIcon above
+  Copy as DuplicateIcon,
 } from 'lucide-react';
