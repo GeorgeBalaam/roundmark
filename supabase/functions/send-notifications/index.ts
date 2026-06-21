@@ -48,7 +48,14 @@ interface RenderedEmail {
 }
 
 const BRAND = '#27542A';
+const BRAND_DEEP = '#1c3d1e';
 const ACCENT = '#8DB259';
+const INK = '#242c33';
+const MUTED = '#6b7464';
+const PAGE_BG = '#eceadf';
+const PANEL_BG = '#f4f7ee';
+const PANEL_BORDER = '#dde6cf';
+const FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
 
 function formatDate(iso?: string): string {
   if (!iso) return '';
@@ -67,79 +74,137 @@ function escapeHtml(s: string): string {
   ));
 }
 
+/** Bulletproof, table-based CTA button (holds up in Outlook). */
 function button(href: string, label: string): string {
-  return `<a href="${href}" style="display:inline-block;background:${ACCENT};color:#10240f;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:10px;margin-top:8px;">${label}</a>`;
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 4px;">
+    <tr><td align="center" bgcolor="${ACCENT}" style="border-radius:10px;">
+      <a href="${href}" target="_blank" style="display:inline-block;padding:14px 30px;font-family:${FONT};font-size:15px;font-weight:700;color:#10240f;text-decoration:none;border-radius:10px;">${label}</a>
+    </td></tr>
+  </table>`;
 }
 
-function layout(bodyHtml: string): string {
-  return `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:#f7f3ea;padding:24px;">
-  <div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e7eadf;">
-    <div style="background:${BRAND};padding:20px 28px;">
-      <span style="color:#ffffff;font-weight:700;font-size:18px;letter-spacing:0.02em;">Roundmark</span>
-    </div>
-    <div style="padding:28px;color:#242c33;font-size:16px;line-height:1.65;">
-      ${bodyHtml}
-    </div>
-    <div style="padding:16px 28px;border-top:1px solid #e7eadf;color:#7a8472;font-size:12px;">
-      Powered by Roundmark — live scoring for golf days.
-    </div>
-  </div>
-</div>`;
+/** Tinted date/venue panel. Returns '' when there's nothing to show. */
+function detailsPanel(when: string, where: string): string {
+  const row = (k: string, v: string) =>
+    `<tr>
+      <td style="padding:3px 12px 3px 0;font-family:${FONT};font-size:13px;color:${MUTED};white-space:nowrap;vertical-align:top;">${k}</td>
+      <td style="padding:3px 0;font-family:${FONT};font-size:15px;font-weight:600;color:${INK};">${v}</td>
+    </tr>`;
+  const rows = [when && row('Date', when), where && row('Venue', where)].filter(Boolean).join('');
+  if (!rows) return '';
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${PANEL_BG};border:1px solid ${PANEL_BORDER};border-radius:12px;margin:22px 0;">
+    <tr><td style="padding:16px 20px;"><table role="presentation" cellpadding="0" cellspacing="0" border="0">${rows}</table></td></tr>
+  </table>`;
+}
+
+/** Full responsive, client-safe email document. */
+function emailDoc(preheader: string, eyebrow: string, inner: string): string {
+  return `<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="x-apple-disable-message-reformatting">
+<meta name="color-scheme" content="light only">
+<title>Roundmark</title>
+</head>
+<body style="margin:0;padding:0;background:${PAGE_BG};-webkit-text-size-adjust:100%;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;mso-hide:all;">${preheader}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${PAGE_BG};">
+<tr><td align="center" style="padding:28px 14px;">
+  <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;background:#ffffff;border-radius:18px;overflow:hidden;border:1px solid #e3e7da;">
+    <tr><td style="background:${BRAND};background-image:linear-gradient(135deg,${BRAND},${BRAND_DEEP});padding:26px 36px;">
+      <span style="font-family:${FONT};color:#ffffff;font-size:21px;font-weight:800;letter-spacing:0.06em;">ROUNDMARK</span>
+      ${eyebrow ? `<div style="font-family:${FONT};color:${ACCENT};font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-top:8px;">${eyebrow}</div>` : `<div style="height:3px;width:42px;background:${ACCENT};margin-top:12px;border-radius:2px;"></div>`}
+    </td></tr>
+    <tr><td style="padding:34px 36px;font-family:${FONT};color:${INK};font-size:16px;line-height:1.65;">
+      ${inner}
+    </td></tr>
+    <tr><td style="padding:22px 36px;background:#f7f5ee;border-top:1px solid #e3e7da;font-family:${FONT};color:#97a08c;font-size:12px;line-height:1.6;">
+      You're receiving this because you registered for a golf day on Roundmark.<br>
+      <span style="color:#b3bbab;">Roundmark — effortless live scoring for golf days.</span>
+    </td></tr>
+  </table>
+</td></tr>
+</table>
+</body></html>`;
+}
+
+function h1(text: string): string {
+  return `<h1 style="margin:0 0 14px;font-family:${FONT};font-size:24px;line-height:1.25;font-weight:800;color:${INK};">${text}</h1>`;
+}
+function p(text: string): string {
+  return `<p style="margin:0 0 14px;font-family:${FONT};font-size:16px;line-height:1.65;color:${INK};">${text}</p>`;
 }
 
 function renderTemplate(template: string, ctx: TemplateCtx): RenderedEmail | null {
   const name = ctx.firstName ? ` ${escapeHtml(ctx.firstName)}` : '';
   const eventName = escapeHtml(ctx.event?.name ?? 'the event');
+  const rawName = ctx.event?.name ?? 'the event';
   const when = formatDate(ctx.event?.date);
   const where = ctx.event?.venue ? escapeHtml(ctx.event.venue) : '';
-  const detail = [when, where].filter(Boolean).join(' · ');
-  const detailLine = detail ? ` — ${detail}` : '';
+  const panel = detailsPanel(when, where);
   const pageUrl = ctx.eventId ? `${ctx.appUrl}/e/${ctx.eventId}` : ctx.appUrl;
 
   switch (template) {
     case 'registration_received':
       return {
-        subject: `We've got your registration for ${ctx.event?.name ?? 'the event'}`,
-        html: layout(
-          `<h1 style="margin:0 0 12px;font-size:22px;">Thanks${name}!</h1>
-           <p style="margin:0 0 12px;">We've received your registration for <strong>${eventName}</strong>${detailLine}.</p>
-           <p style="margin:0;">Your place isn't confirmed until the organiser approves it — we'll email you the moment they do.</p>`,
+        subject: `We've got your registration for ${rawName}`,
+        html: emailDoc(
+          `Thanks${name} — your registration is in and awaiting approval.`,
+          'Registration received',
+          `${h1(`Thanks${name} — you're on the list`)}
+           ${p(`We've received your registration for <strong>${eventName}</strong>. Here are the details:`)}
+           ${panel}
+           ${p(`Your place isn't confirmed just yet — the organiser reviews sign-ups and we'll email you the moment yours is approved.`)}
+           ${p(`<a href="${pageUrl}" style="color:${BRAND};font-weight:600;">View the event page →</a>`)}`,
         ),
       };
     case 'registration_approved':
       return {
-        subject: `You're in — ${ctx.event?.name ?? 'the event'}`,
-        html: layout(
-          `<h1 style="margin:0 0 12px;font-size:22px;">You're in${name}!</h1>
-           <p style="margin:0 0 16px;">Your place at <strong>${eventName}</strong>${detail ? ` (${detail})` : ''} is confirmed. We can't wait to see you on the course.</p>
-           ${button(pageUrl, 'View the event page')}`,
+        subject: `You're in! Your place at ${rawName} is confirmed`,
+        html: emailDoc(
+          `Your place at ${rawName} is confirmed — see you on the course.`,
+          'You\'re confirmed',
+          `${h1(`You're in${name} 🎉`)}
+           ${p(`Great news — your place at <strong>${eventName}</strong> is confirmed. We can't wait to see you on the course.`)}
+           ${panel}
+           ${button(pageUrl, 'View the event page')}
+           ${p(`<span style="color:${MUTED};font-size:14px;">Add the date to your calendar so you don't miss your tee time.</span>`)}`,
         ),
       };
     case 'registration_declined':
       return {
-        subject: `About your registration for ${ctx.event?.name ?? 'the event'}`,
-        html: layout(
-          `<h1 style="margin:0 0 12px;font-size:22px;">Hi${name},</h1>
-           <p style="margin:0 0 12px;">Thanks for your interest in <strong>${eventName}</strong>. Unfortunately the organiser wasn't able to confirm your place this time.</p>
-           <p style="margin:0;">If you think this was a mistake, please reach out to the organiser directly.</p>`,
+        subject: `An update on your registration for ${rawName}`,
+        html: emailDoc(
+          `An update on your ${rawName} registration.`,
+          'Registration update',
+          `${h1(`Hi${name},`)}
+           ${p(`Thank you for your interest in <strong>${eventName}</strong>. Unfortunately the organiser wasn't able to confirm a place for you this time — these days often fill up fast.`)}
+           ${p(`If you think this was a mistake, or you'd like to be considered for a cancellation, please reach out to the organiser directly.`)}`,
         ),
       };
     case 'event_reminder':
       return {
-        subject: `${ctx.event?.name ?? 'Your golf day'} is nearly here`,
-        html: layout(
-          `<h1 style="margin:0 0 12px;font-size:22px;">See you soon${name}!</h1>
-           <p style="margin:0 0 16px;"><strong>${eventName}</strong>${detailLine} is coming up. Here's everything you need.</p>
-           ${button(pageUrl, 'Event details')}`,
+        subject: `Not long now — ${rawName} is nearly here`,
+        html: emailDoc(
+          `${rawName} is coming up — here's everything you need.`,
+          'See you soon',
+          `${h1(`Not long now${name}!`)}
+           ${p(`<strong>${eventName}</strong> is almost here. Here's everything you need for the day:`)}
+           ${panel}
+           ${button(pageUrl, 'Event details')}
+           ${p(`<span style="color:${MUTED};font-size:14px;">Tip: bookmark the event page — your live leaderboard link will be there on the day.</span>`)}`,
         ),
       };
     case 'results_published':
       return {
-        subject: `Results are in — ${ctx.event?.name ?? 'the event'}`,
-        html: layout(
-          `<h1 style="margin:0 0 12px;font-size:22px;">The results are in${name}!</h1>
-           <p style="margin:0 0 16px;">Final standings for <strong>${eventName}</strong> are ready to view.</p>
-           ${button(pageUrl, 'See the results')}`,
+        subject: `The results are in — ${rawName} 🏆`,
+        html: emailDoc(
+          `Final standings for ${rawName} are ready to view.`,
+          'Results are in',
+          `${h1(`The results are in 🏆`)}
+           ${p(`Final standings for <strong>${eventName}</strong> have been locked in. Thanks for a brilliant day${name}!`)}
+           ${button(pageUrl, 'See the final results')}`,
         ),
       };
     default:
