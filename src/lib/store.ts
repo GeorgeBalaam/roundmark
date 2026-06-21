@@ -62,6 +62,7 @@ function eventFromRow(
 ): RoundmarkEvent {
   return {
     id: row.id as string,
+    ownerId: (row.owner_id as string | null) ?? undefined,
     name: (row.name as string) ?? '',
     date: (row.date as string) ?? '',
     venue: (row.venue as string) ?? '',
@@ -1022,6 +1023,11 @@ export async function signOut() {
 export function useSession() {
   const db = useDB();
   return db.session;
+}
+
+/** The signed-in Supabase user id (null when unauthenticated). */
+export function getCurrentUserId(): string | null {
+  return currentUserId;
 }
 
 /** Current user's role (from the live session). */

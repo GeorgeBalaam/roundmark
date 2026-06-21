@@ -14,15 +14,17 @@ export type NotificationTemplate =
   | 'registration_approved'
   | 'registration_declined'
   | 'event_reminder'
-  | 'results_published';
+  | 'results_published'
+  | 'organiser_invite';
 
-/** The catalog the future Resend drainer renders from. */
+/** The catalog the Resend drainer renders from (mirrors the drainer's renderTemplate). */
 export const NOTIFICATION_TEMPLATES: Record<NotificationTemplate, { description: string }> = {
   registration_received: { description: 'Player signed up — confirms we received their registration.' },
   registration_approved: { description: "Organiser approved a sign-up — you're in, with the details." },
   registration_declined: { description: 'A sign-up was declined or waitlisted.' },
   event_reminder: { description: 'Day-of reminder with tee time / starting hole and scoring link.' },
   results_published: { description: 'Results locked — final standings and a link.' },
+  organiser_invite: { description: 'Someone was invited to co-organise an event — sign in to accept.' },
 };
 
 export interface NotifyInput {

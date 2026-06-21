@@ -207,6 +207,19 @@ function renderTemplate(template: string, ctx: TemplateCtx): RenderedEmail | nul
            ${button(pageUrl, 'See the final results')}`,
         ),
       };
+    case 'organiser_invite':
+      return {
+        subject: `You've been invited to co-organise ${rawName}`,
+        html: emailDoc(
+          `You've been invited to help organise ${rawName} on Roundmark.`,
+          'Organiser invite',
+          `${h1('You\'ve been invited to co-organise')}
+           ${p(`You've been invited to help organise <strong>${eventName}</strong> on Roundmark — with full access to set it up and run the day.`)}
+           ${panel}
+           ${p('Sign in with this email address to accept. If you don\'t have an account yet, signing in creates one.')}
+           ${button(`${ctx.appUrl}/login`, 'Sign in to accept')}`,
+        ),
+      };
     default:
       return null;
   }

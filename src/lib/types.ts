@@ -176,6 +176,8 @@ export const EVENT_BLOCK_META: Record<EventBlockType, { label: string; descripti
 
 export interface RoundmarkEvent {
   id: string;
+  /** Supabase auth user id of the owner (the creator / paying account). */
+  ownerId?: string;
   name: string;
   date: string; // ISO date (yyyy-mm-dd)
   venue: string;
