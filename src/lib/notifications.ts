@@ -1,11 +1,11 @@
 // Notification seam (provider-agnostic).
-// We are not wiring an email provider yet. Notification *intent* is captured in
-// the `notifications` outbox table (see migration 0008): registration emails are
-// enqueued automatically by a DB trigger; owner-initiated ones go through
-// queueNotification() below. Nothing is sent until the Resend drainer — a future
-// edge function that reads pending rows, sends, and marks them sent/failed — is
-// added. That wiring requires no changes here: this file is the single source of
-// truth for which templates exist and what data they carry.
+// Notification *intent* is captured in the `notifications` outbox table (see
+// migration 0008): registration emails are enqueued automatically by a DB
+// trigger; owner-initiated ones go through queueNotification() below. Rows are
+// delivered by the Resend drainer edge function (supabase/functions/
+// send-notifications), which reads pending rows, sends, and marks them
+// sent/failed. This file stays the single source of truth for which templates
+// exist and what data they carry — the drainer's templates.ts mirrors it.
 
 import { supabase, isSupabaseConfigured } from './supabase';
 
