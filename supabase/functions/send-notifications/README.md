@@ -28,8 +28,10 @@ Run `supabase/migrations/0011_notifications_attempts.sql` in the SQL editor
 (adds the retry counter the drainer uses).
 
 ### 3. Deploy the function
+Single self-contained file (templates inlined), so nothing else to create.
+
 Dashboard: **Edge Functions → Deploy a new function → `send-notifications`**,
-paste `index.ts` + `templates.ts`, and turn **Verify JWT = OFF**.
+paste `index.ts`, and turn **Verify JWT = OFF**.
 
 Or CLI:
 ```bash
@@ -98,7 +100,7 @@ This is a dashboard change only — no code involved.
 ---
 
 ## Templates
-Defined in `templates.ts`, keyed by the `template` column. Current set:
-`registration_received`, `registration_approved`, `registration_declined`,
-`event_reminder`, `results_published` — mirrors the catalog in
-`src/lib/notifications.ts`.
+Defined inline in `index.ts` (`renderTemplate`), keyed by the `template` column.
+Current set: `registration_received`, `registration_approved`,
+`registration_declined`, `event_reminder`, `results_published` — mirrors the
+catalog in `src/lib/notifications.ts`.
