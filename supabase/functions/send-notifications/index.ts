@@ -112,9 +112,9 @@ function emailDoc(preheader: string, eyebrow: string, inner: string): string {
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${PAGE_BG};">
 <tr><td align="center" style="padding:28px 14px;">
   <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;background:#ffffff;border-radius:18px;overflow:hidden;border:1px solid #e3e7da;">
-    <tr><td style="background:${BRAND};background-image:linear-gradient(135deg,${BRAND},${BRAND_DEEP});padding:26px 36px;">
-      <span style="font-family:${FONT};color:#ffffff;font-size:21px;font-weight:800;letter-spacing:0.06em;">ROUNDMARK</span>
-      ${eyebrow ? `<div style="font-family:${FONT};color:${ACCENT};font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-top:8px;">${eyebrow}</div>` : `<div style="height:3px;width:42px;background:${ACCENT};margin-top:12px;border-radius:2px;"></div>`}
+    <tr><td style="background:${BRAND};background-image:linear-gradient(135deg,${BRAND},${BRAND_DEEP});padding:24px 36px;">
+      <img src="${APP_URL}/brand/roundmark-logo-horizontal-white.png" alt="Roundmark" height="30" style="height:30px;width:auto;display:block;border:0;outline:none;text-decoration:none;">
+      ${eyebrow ? `<div style="font-family:${FONT};color:${ACCENT};font-size:12px;font-weight:600;letter-spacing:0.03em;margin-top:12px;">${eyebrow}</div>` : `<div style="height:3px;width:42px;background:${ACCENT};margin-top:14px;border-radius:2px;"></div>`}
     </td></tr>
     <tr><td style="padding:34px 36px;font-family:${FONT};color:${INK};font-size:16px;line-height:1.65;">
       ${inner}
