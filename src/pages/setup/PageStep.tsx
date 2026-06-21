@@ -11,8 +11,8 @@ import { EventPageHero } from '../../components/EventPageHero';
 import { EventContent } from '../../components/EventContent';
 import {
   AddIcon, CloseIcon, MoveUpIcon, MoveDownIcon, EventIcon, DisclosureIcon, DuplicateIcon,
-  DesktopIcon, MobileIcon, TextBlockIcon, ImageBlockIcon, FeatureBlockIcon, ButtonBlockIcon,
-  VideoBlockIcon, MapPinIcon, ScheduleBlockIcon, FaqBlockIcon, ICON_SM,
+  DesktopIcon, MobileIcon, OpenExternalIcon, TextBlockIcon, ImageBlockIcon, FeatureBlockIcon,
+  ButtonBlockIcon, VideoBlockIcon, MapPinIcon, ScheduleBlockIcon, FaqBlockIcon, ICON_SM,
 } from '../../lib/icons';
 import { makeId, updateEvent } from '../../lib/store';
 import { eventLandingUrl, eventLandingPath } from '../../lib/links';
@@ -237,6 +237,16 @@ export default function PageStep({ event }: { event: RoundmarkEvent }) {
           <div className="preview-chrome">
             <span className="dot" /><span className="dot" /><span className="dot" />
             <span className="preview-url">{eventLandingPath(event.id)}</span>
+            <a
+              className="preview-open"
+              href={eventLandingUrl(event.id)}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Open preview in a new tab"
+              title="Open in new tab"
+            >
+              <OpenExternalIcon size={ICON_SM} />
+            </a>
           </div>
           <div className={`preview-scroll device-${device}`}>
             <div className="preview-canvas" style={{ ...eventThemeVars(event), background: 'var(--rm-bg)' }}>

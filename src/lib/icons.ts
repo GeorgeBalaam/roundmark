@@ -80,4 +80,9 @@ export {
   // Event-page builder: preview device toggle + block actions
   Monitor as DesktopIcon, // mobile uses MobileIcon above
   Copy as DuplicateIcon,
+  ExternalLink as OpenExternalIcon, // open the real page in a new tab
+
+  // Multi-organiser / access
+  UserPlus as InviteIcon,
+  Crown as OwnerIcon,
 } from 'lucide-react';

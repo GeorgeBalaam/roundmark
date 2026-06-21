@@ -1053,6 +1053,19 @@ svg.lucide { flex-shrink: 0; vertical-align: -0.125em; }
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.preview-chrome .preview-open {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  color: var(--rm-muted);
+  flex-shrink: 0;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.preview-chrome .preview-open:hover { background: rgba(141, 178, 89, 0.16); color: var(--rm-green-deep); }
 .preview-scroll {
   max-height: 72vh;
   overflow-y: auto;
