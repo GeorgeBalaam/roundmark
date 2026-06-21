@@ -9,7 +9,7 @@
 -- Invites: the owner adds an email to event_organiser_invites; a branded
 -- 'organiser_invite' email is queued (existing notifications drainer); when the
 -- invitee signs in, claim_memberships() turns the invite into an organiser
--- membership automatically — no separate accept page needed.
+-- membership automatically --" no separate accept page needed.
 
 -- 1. Editor predicate: owner or a co-organiser/host member.
 create or replace function public.is_event_editor(eid text)
