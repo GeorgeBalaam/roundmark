@@ -84,6 +84,7 @@ export function createEvent(partial?: Partial<RoundmarkEvent>): RoundmarkEvent {
     sponsors: [],
     scorecards: {},
     sideComps: {},
+    awards: [],
     createdAt: now,
     updatedAt: now,
     ...partial,
@@ -124,6 +125,8 @@ export function duplicateEvent(source: RoundmarkEvent, includePlayers: boolean):
     sponsors: source.sponsors.map((s) => ({ ...s, id: makeId() })),
     scorecards: {},
     sideComps: {},
+    // Carry award definitions + prizes to the new event, but clear winners.
+    awards: source.awards?.map((a) => ({ ...a, id: makeId(), winner: undefined })) ?? [],
     createdAt: now,
     updatedAt: now,
   };

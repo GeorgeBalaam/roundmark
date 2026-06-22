@@ -7,10 +7,11 @@ import { Badge, Button, Card, Logo, ProvisionalBadge, SponsorStrip } from '../co
 import { useToast } from '../components/toast-context';
 import { buildResultsCSV, downloadCSV } from '../lib/csv';
 import { computeTeamStandings } from '../lib/scoring';
+import { effectiveAwards, resolveAwardWinner } from '../lib/awards';
 import { eventThemeVars } from '../lib/theme';
 import { fetchEventIfMissing, useEvent } from '../lib/store';
 import { FORMAT_LABELS } from '../lib/types';
-import { PrintIcon, DownloadIcon, MedalIcon, NearestPinIcon, LongestDriveIcon, ICON_SM, ICON_LG } from '../lib/icons';
+import { PrintIcon, DownloadIcon, MedalIcon, TrophyIcon, ICON_SM, ICON_LG } from '../lib/icons';
 
 const MEDAL_COLORS = ['#d4af37', '#9ca3af', '#cd7f32']; // gold, silver, bronze
 
@@ -111,25 +112,28 @@ export default function ResultsPage() {
         </div>
       )}
 
-      {(event.sideComps.nearestPinWinner || event.sideComps.longestDriveWinner) && (
-        <div style={{ marginTop: 'var(--space-8)' }}>
-          <h2>Side competitions</h2>
-          <div className="grid-cards" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
-            {event.sideComps.nearestPinWinner && (
-              <Card>
-                <div className="stat-label" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><NearestPinIcon size={ICON_SM} /> Nearest the pin{event.sideComps.nearestPinHole ? ` — hole ${event.sideComps.nearestPinHole}` : ''}</div>
-                <div className="stat-value" style={{ fontSize: '1.4rem' }}>{event.sideComps.nearestPinWinner}</div>
-              </Card>
-            )}
-            {event.sideComps.longestDriveWinner && (
-              <Card>
-                <div className="stat-label" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><LongestDriveIcon size={ICON_SM} /> Longest drive{event.sideComps.longestDriveHole ? ` — hole ${event.sideComps.longestDriveHole}` : ''}</div>
-                <div className="stat-value" style={{ fontSize: '1.4rem' }}>{event.sideComps.longestDriveWinner}</div>
-              </Card>
-            )}
+      {(() => {
+        const awards = effectiveAwards(event)
+          .map((a) => ({ award: a, winner: resolveAwardWinner(event, a) }))
+          .filter((x) => x.winner || x.award.prize);
+        if (!awards.length) return null;
+        return (
+          <div style={{ marginTop: 'var(--space-8)' }}>
+            <h2>Awards &amp; prizes</h2>
+            <div className="grid-cards" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
+              {awards.map(({ award, winner }) => (
+                <Card key={award.id}>
+                  <div className="stat-label" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <TrophyIcon size={ICON_SM} /> {award.title}{award.hole ? ` — hole ${award.hole}` : ''}
+                  </div>
+                  <div className="stat-value" style={{ fontSize: '1.4rem' }}>{winner ?? '—'}</div>
+                  {award.prize && <div className="text-small text-muted" style={{ marginTop: 2 }}>Prize: {award.prize}</div>}
+                </Card>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {event.sponsors.length > 0 && (
         <div style={{ marginTop: 'var(--space-10)' }}>

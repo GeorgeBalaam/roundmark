@@ -189,6 +189,12 @@ export function buildSeedDB(): RoundmarkDB {
     ],
     scorecards: liveScorecards,
     sideComps: { nearestPinHole: 7, longestDriveHole: 13 },
+    awards: [
+      { id: 'live-a1', title: 'Nearest the Pin', source: 'manual', hole: 7, prize: 'DeWalt 18V drill' },
+      { id: 'live-a2', title: 'Longest Drive', source: 'manual', hole: 13, prize: 'A dozen Pro V1s' },
+      { id: 'live-a3', title: 'Overall Winners', source: 'team_winner', prize: '£1,000 to a charity of your choice' },
+      { id: 'live-a4', title: 'Most Birdies', source: 'most_birdies', prize: 'Bottle of fizz' },
+    ],
     content: [
       {
         id: 'demo-b1',
@@ -273,6 +279,11 @@ export function buildSeedDB(): RoundmarkDB {
       longestDriveWinner: 'Marcus Boyle',
       longestDriveHole: 13,
     },
+    awards: [
+      { id: 'done-a1', title: 'Nearest the Pin', source: 'manual', hole: 7, prize: 'Bottle of single malt', winner: 'Priya Sharma' },
+      { id: 'done-a2', title: 'Longest Drive', source: 'manual', hole: 13, prize: 'Callaway driver', winner: 'Marcus Boyle' },
+      { id: 'done-a3', title: 'Overall Winners', source: 'team_winner', prize: '£1,000 to a charity of your choice' },
+    ],
     createdAt: lastMonth,
     updatedAt: lastMonth,
     lockedAt: lastMonth,

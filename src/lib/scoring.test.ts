@@ -7,6 +7,7 @@ import {
   computePlayerStandings,
   isNetEvent,
 } from './scoring';
+import { mostBirdiesPlayer } from './awards';
 import type { Hole, Player, RoundmarkEvent, Scorecard, ScoreCell, Team } from './types';
 
 // --- Test helpers ----------------------------------------------------------
@@ -204,5 +205,34 @@ describe('computePlayerStandings — net stroke play', () => {
   it('returns no individuals for scramble', () => {
     const event = makeEvent({ format: 'scramble', teams: [team('t1', ['a'])], players: [p('a', 0)] });
     expect(computePlayerStandings(event)).toEqual([]);
+  });
+});
+
+// --- mostBirdiesPlayer (awards) -------------------------------------------
+
+describe('mostBirdiesPlayer', () => {
+  it('counts holes under par and picks the leader', () => {
+    const event = makeEvent({
+      players: [p('a', 0), p('b', 0)],
+      teams: [team('t1', ['a', 'b'])],
+      holes: holes([[4, 1], [4, 2]]),
+      scorecards: { t1: card('t1', { a: [3, 4], b: [4, 4] }) }, // a: 1 birdie, b: 0
+    });
+    expect(mostBirdiesPlayer(event)).toEqual({ name: 'a X', count: 1 });
+  });
+
+  it('ignores pickups (X) and returns null with no birdies', () => {
+    const event = makeEvent({
+      players: [p('a', 0)],
+      teams: [team('t1', ['a'])],
+      holes: holes([[4, 1], [4, 2]]),
+      scorecards: { t1: card('t1', { a: ['X', 5] }) },
+    });
+    expect(mostBirdiesPlayer(event)).toBeNull();
+  });
+
+  it('is null for scramble', () => {
+    const event = makeEvent({ format: 'scramble', players: [p('a', 0)], teams: [team('t1', ['a'])] });
+    expect(mostBirdiesPlayer(event)).toBeNull();
   });
 });

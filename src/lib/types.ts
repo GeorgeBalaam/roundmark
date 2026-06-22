@@ -141,6 +141,53 @@ export interface SideCompetitions {
   longestDriveHole?: number;
 }
 
+// --- Awards & prizes -------------------------------------------------------
+// Flexible award model (replaces the rigid two side-comps). An award has a
+// title, an optional hole + prize, and a winner that's either entered by hand
+// (manual) or computed from the standings (auto sources). Optional per event.
+
+export type AwardSource =
+  | 'manual'              // organiser enters the winner (nearest pin, best swing, custom…)
+  | 'team_winner'         // top of team standings
+  | 'individual_winner'   // top of individual standings
+  | 'wooden_spoon_team'   // bottom team
+  | 'most_birdies';       // most birdies (player), from per-hole scores
+
+export interface Award {
+  id: string;
+  title: string;
+  source: AwardSource;
+  hole?: number;     // optional, for on-course comps
+  prize?: string;    // e.g. "DeWalt drill", "£1,000 to a charity of choice"
+  winner?: string;   // manual entry (auto sources resolve at display time)
+}
+
+export interface AwardPreset {
+  key: string;
+  title: string;
+  source: AwardSource;
+  needsHole?: boolean;
+  description: string;
+}
+
+/** Quick-add catalog for the Awards setup step. 'custom' is the escape hatch. */
+export const AWARD_PRESETS: AwardPreset[] = [
+  { key: 'nearest_pin', title: 'Nearest the Pin', source: 'manual', needsHole: true, description: 'Judged on a par 3. You pick the winner.' },
+  { key: 'longest_drive', title: 'Longest Drive', source: 'manual', needsHole: true, description: 'Judged on one hole. You pick the winner.' },
+  { key: 'overall_winner', title: 'Overall Winners', source: 'team_winner', description: 'Auto — the top team on the leaderboard.' },
+  { key: 'most_birdies', title: 'Most Birdies', source: 'most_birdies', description: 'Auto — the player with the most birdies.' },
+  { key: 'wooden_spoon', title: 'Wooden Spoon', source: 'wooden_spoon_team', description: 'Auto — the team that finishes last.' },
+];
+
+/** How a winner is decided, for a small badge in the UI. */
+export const AWARD_SOURCE_LABEL: Record<AwardSource, string> = {
+  manual: 'Judged',
+  team_winner: 'Auto',
+  individual_winner: 'Auto',
+  wooden_spoon_team: 'Auto',
+  most_birdies: 'Auto',
+};
+
 // --- Public event page (branded microsite at /e/:id) -----------------------
 // Ordered content blocks the organiser composes. Public marketing content only
 // (no PII), so it lives on the world-readable event row.
@@ -216,7 +263,10 @@ export interface RoundmarkEvent {
   sponsors: Sponsor[];
   /** Keyed by teamId. */
   scorecards: Record<string, Scorecard>;
+  /** Legacy nearest-pin/longest-drive. Superseded by `awards` (kept for back-compat). */
   sideComps: SideCompetitions;
+  /** Optional awards & prizes for the day (presets + custom). */
+  awards?: Award[];
   createdAt: string;
   updatedAt: string;
   lockedAt?: string;

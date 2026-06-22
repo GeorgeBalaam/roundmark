@@ -22,6 +22,7 @@ import { buildResultsCSV, downloadCSV } from '../lib/csv';
 import { lockResults, unlockResults } from '../lib/events';
 import { eventProgress } from '../lib/scoring';
 import { addAudit, updateEvent, useDB, useEvent } from '../lib/store';
+import { resolveAwardWinner, isManualAward } from '../lib/awards';
 import type { RoundmarkEvent, ScoreCell, Team } from '../lib/types';
 
 const ADMIN_NAME = 'Demo Organiser';
@@ -352,56 +353,53 @@ export default function ConsolePage() {
         })}
       </div>
 
-      {/* Side competitions */}
+      {/* Awards & prizes */}
       <Card padLg style={{ marginBottom: 'var(--space-8)', maxWidth: 720 }}>
-        <h3 style={{ marginBottom: 4 }}>Side competitions</h3>
-        <p className="text-muted text-small">Recorded manually by the organiser — shown on the final results.</p>
-        <div className="form-grid">
-          <FormField
-            label="Nearest the pin — winner"
-            placeholder="Player name"
-            value={event.sideComps.nearestPinWinner ?? ''}
-            onChange={(e) =>
-              updateEvent(event.id, (ev) => {
-                ev.sideComps.nearestPinWinner = e.target.value || undefined;
-              })
-            }
-          />
-          <FormField
-            label="Nearest the pin — hole"
-            type="number"
-            min={1}
-            max={event.holes.length}
-            value={event.sideComps.nearestPinHole ?? ''}
-            onChange={(e) =>
-              updateEvent(event.id, (ev) => {
-                ev.sideComps.nearestPinHole = e.target.value ? Number(e.target.value) : undefined;
-              })
-            }
-          />
-          <FormField
-            label="Longest drive — winner"
-            placeholder="Player name"
-            value={event.sideComps.longestDriveWinner ?? ''}
-            onChange={(e) =>
-              updateEvent(event.id, (ev) => {
-                ev.sideComps.longestDriveWinner = e.target.value || undefined;
-              })
-            }
-          />
-          <FormField
-            label="Longest drive — hole"
-            type="number"
-            min={1}
-            max={event.holes.length}
-            value={event.sideComps.longestDriveHole ?? ''}
-            onChange={(e) =>
-              updateEvent(event.id, (ev) => {
-                ev.sideComps.longestDriveHole = e.target.value ? Number(e.target.value) : undefined;
-              })
-            }
-          />
-        </div>
+        <h3 style={{ marginBottom: 4 }}>Awards &amp; prizes</h3>
+        <p className="text-muted text-small">
+          Assign winners for the judged awards — the auto ones work out from the leaderboard. All shown on the final results.
+        </p>
+        {(event.awards ?? []).length === 0 ? (
+          <p className="text-muted" style={{ margin: 0 }}>
+            No awards set up. Add them in the event's <strong>Awards &amp; prizes</strong> step.
+          </p>
+        ) : (
+          <div className="stack-4" style={{ marginTop: 'var(--space-4)' }}>
+            {(event.awards ?? []).map((award) => {
+              const resolved = resolveAwardWinner(event, award);
+              return (
+                <div key={award.id} className="row-between" style={{ gap: 'var(--space-4)', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                  <div style={{ flex: '1 1 220px' }}>
+                    <div style={{ fontWeight: 600 }}>
+                      {award.title || 'Untitled award'}{award.hole ? ` — hole ${award.hole}` : ''}
+                    </div>
+                    {award.prize && <div className="text-small text-muted">Prize: {award.prize}</div>}
+                  </div>
+                  <div style={{ flex: '1 1 220px' }}>
+                    {isManualAward(award) ? (
+                      <FormField
+                        label="Winner"
+                        placeholder="Player or team name"
+                        value={award.winner ?? ''}
+                        onChange={(e) =>
+                          updateEvent(event.id, (ev) => {
+                            const a = (ev.awards ?? []).find((x) => x.id === award.id);
+                            if (a) a.winner = e.target.value || undefined;
+                          })
+                        }
+                      />
+                    ) : (
+                      <>
+                        <div className="field-label">Winner (auto)</div>
+                        <div style={{ fontWeight: 600 }}>{resolved ?? 'Pending — needs scores'}</div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </Card>
 
       {/* Audit log */}

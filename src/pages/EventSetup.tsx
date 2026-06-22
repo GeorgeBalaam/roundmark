@@ -15,11 +15,12 @@ import PageStep from './setup/PageStep';
 import PlayersStep from './setup/PlayersStep';
 import TeamsStep from './setup/TeamsStep';
 import SponsorsStep from './setup/SponsorsStep';
+import AwardsStep from './setup/AwardsStep';
 import OrganisersStep from './setup/OrganisersStep';
 import LinksStep from './setup/LinksStep';
 import ReviewStep from './setup/ReviewStep';
 
-const STEP_ORDER = ['info', 'course', 'signups', 'page', 'players', 'teams', 'sponsors', 'organisers', 'links', 'review'] as const;
+const STEP_ORDER = ['info', 'course', 'signups', 'page', 'players', 'teams', 'sponsors', 'awards', 'organisers', 'links', 'review'] as const;
 type StepKey = (typeof STEP_ORDER)[number];
 
 const STEP_LABELS: Record<StepKey, string> = {
@@ -30,6 +31,7 @@ const STEP_LABELS: Record<StepKey, string> = {
   players: 'Players',
   teams: 'Teams',
   sponsors: 'Sponsors',
+  awards: 'Awards & prizes',
   organisers: 'Organisers',
   links: 'QR links',
   review: 'Review & go live',
@@ -65,7 +67,9 @@ export default function EventSetupPage() {
             ? !!event.registration?.open
             : key === 'page'
               ? (event.content?.length ?? 0) > 0 || !!event.heroImageUrl
-              : !!doneByKey[key],
+              : key === 'awards'
+                ? (event.awards?.length ?? 0) > 0
+                : !!doneByKey[key],
   }));
 
   function goTo(key: string) {
@@ -112,6 +116,7 @@ export default function EventSetupPage() {
       {step === 'players' && <PlayersStep event={event} />}
       {step === 'teams' && <TeamsStep event={event} />}
       {step === 'sponsors' && <SponsorsStep event={event} />}
+      {step === 'awards' && <AwardsStep event={event} />}
       {step === 'organisers' && <OrganisersStep event={event} />}
       {step === 'links' && <LinksStep event={event} />}
       {step === 'review' && <ReviewStep event={event} />}
