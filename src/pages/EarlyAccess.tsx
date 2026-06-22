@@ -5,14 +5,16 @@
 // testing access while the public site is in coming-soon mode.
 
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Badge, Button, Card, FormField, Logo } from '../components/ui';
 import { SuccessIcon, ICON_XL } from '../lib/icons';
 import { submitEarlyAccess } from '../lib/notifications';
+import { signInDemo } from '../lib/store';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function EarlyAccessPage() {
+  const navigate = useNavigate();
   const [form, setForm] = useState({ name: '', email: '', company: '' });
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
@@ -98,22 +100,23 @@ export default function EarlyAccessPage() {
         </p>
       </div>
 
-      {/* Discreet access into the app for testing while the site is in coming-soon mode. */}
-      <Link
-        to="/login"
-        aria-label="Sign in"
-        title="Sign in"
-        style={{
-          position: 'fixed',
-          bottom: 10,
-          right: 12,
-          width: 16,
-          height: 16,
-          borderRadius: '50%',
-          background: 'rgba(255,255,255,0.12)',
-          opacity: 0.4,
-        }}
-      />
+      {/* Discreet access into the app for testing while the site is in coming-soon mode:
+          a dot to sign in, and one to jump straight into the seeded demo. */}
+      <div style={{ position: 'fixed', bottom: 10, right: 12, display: 'flex', gap: 8 }}>
+        <Link
+          to="/login"
+          aria-label="Sign in"
+          title="Sign in"
+          style={{ width: 16, height: 16, borderRadius: '50%', background: 'rgba(255,255,255,0.12)', opacity: 0.4 }}
+        />
+        <button
+          type="button"
+          aria-label="Open demo account"
+          title="Open demo account"
+          onClick={() => { signInDemo(); navigate('/app'); }}
+          style={{ width: 16, height: 16, borderRadius: '50%', background: 'rgba(141,178,89,0.4)', border: 'none', padding: 0, cursor: 'pointer', opacity: 0.4 }}
+        />
+      </div>
     </div>
   );
 }

@@ -1007,11 +1007,11 @@ export async function signIn(email: string): Promise<string | null> {
   return error?.message ?? null;
 }
 
-/** One-click demo sign-in (no email, localStorage only — dev/unconfigured mode). */
+/** One-click demo sign-in (no email, localStorage only). Admin + full plan so a
+ *  tester can exercise everything (demo events, go-live, etc.). */
 export function signInDemo() {
-  // Demo mode is an admin tool, so the local demo session is treated as admin.
   currentRole = 'admin';
-  mutate((db) => { db.session = { organiserName: 'Demo Organiser', role: 'admin' }; });
+  mutate((db) => { db.session = { organiserName: 'Demo Organiser', role: 'admin', plan: 'full' }; });
 }
 
 export async function signOut() {
