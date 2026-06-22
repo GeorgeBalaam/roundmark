@@ -15,7 +15,8 @@ export type NotificationTemplate =
   | 'registration_declined'
   | 'event_reminder'
   | 'results_published'
-  | 'organiser_invite';
+  | 'organiser_invite'
+  | 'early_access_received';
 
 /** The catalog the Resend drainer renders from (mirrors the drainer's renderTemplate). */
 export const NOTIFICATION_TEMPLATES: Record<NotificationTemplate, { description: string }> = {
@@ -25,6 +26,7 @@ export const NOTIFICATION_TEMPLATES: Record<NotificationTemplate, { description:
   event_reminder: { description: 'Day-of reminder with tee time / starting hole and scoring link.' },
   results_published: { description: 'Results locked — final standings and a link.' },
   organiser_invite: { description: 'Someone was invited to co-organise an event — sign in to accept.' },
+  early_access_received: { description: 'Pre-launch interest registered — confirms they are on the early-access list.' },
 };
 
 export interface NotifyInput {
@@ -41,6 +43,25 @@ export interface NotifyInput {
  * rest. Rows sit `pending` until the Resend drainer is wired; in dev/unconfigured
  * mode this is a no-op that logs.
  */
+/**
+ * Register pre-launch interest (early-access list). Anon insert is allowed by
+ * RLS; a DB trigger queues the confirmation email. In dev/unconfigured mode this
+ * is a no-op that logs.
+ */
+export async function submitEarlyAccess(input: { email: string; name?: string; company?: string }): Promise<string | null> {
+  if (!isSupabaseConfigured || !supabase) {
+    console.info('[early-access:dev]', input);
+    return null;
+  }
+  const { error } = await supabase.from('early_access').insert({
+    email: input.email.trim(),
+    name: input.name?.trim() || null,
+    company: input.company?.trim() || null,
+    source: 'site',
+  });
+  return error ? error.message : null;
+}
+
 export async function queueNotification(input: NotifyInput): Promise<void> {
   if (!isSupabaseConfigured || !supabase || !input.to) {
     console.info('[notify:dev]', input.template, '→', input.to, input.data ?? {});

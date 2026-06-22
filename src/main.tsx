@@ -10,6 +10,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { SyncIndicator } from './components/SyncIndicator';
 import LoginPage, { RequireSession } from './pages/Login';
 import MarketingPage from './pages/Marketing';
+import EarlyAccessPage from './pages/EarlyAccess';
 import DashboardPage from './pages/Dashboard';
 import HistoryPage from './pages/History';
 import EventSetupPage from './pages/EventSetup';
@@ -24,7 +25,8 @@ import SettingsPage from './pages/Settings';
 import PlayerDashboardPage from './pages/PlayerDashboard';
 
 const router = createBrowserRouter([
-  { path: '/', element: <MarketingPage /> },
+  { path: '/', element: <EarlyAccessPage /> },
+  { path: '/marketing', element: <MarketingPage /> },
   { path: '/login', element: <LoginPage /> },
   {
     path: '/app',

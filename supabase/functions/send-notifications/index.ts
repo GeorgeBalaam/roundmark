@@ -207,6 +207,17 @@ function renderTemplate(template: string, ctx: TemplateCtx): RenderedEmail | nul
            ${button(pageUrl, 'See the final results')}`,
         ),
       };
+    case 'early_access_received':
+      return {
+        subject: 'You\'re on the Roundmark early-access list',
+        html: emailDoc(
+          'Thanks for your interest in Roundmark - you are on the early-access list.',
+          'Early access',
+          `${h1(`Thanks${name} - you're on the list`)}
+           ${p('Thanks for registering your interest in <strong>Roundmark</strong> - effortless live scoring for golf days. We\'re putting the finishing touches on it.')}
+           ${p('We\'ll email you the moment it\'s ready for you to run your first golf day. No spam in the meantime.')}`,
+        ),
+      };
     case 'organiser_invite':
       return {
         subject: `You've been invited to co-organise ${rawName}`,
