@@ -9,7 +9,7 @@ import { Countdown } from '../components/Countdown';
 import { EventContent } from '../components/EventContent';
 import { EventPageHero } from '../components/EventPageHero';
 import { effectiveAwards } from '../lib/awards';
-import { SuccessIcon, TrophyIcon, ICON_SM, ICON_XL } from '../lib/icons';
+import { SuccessIcon, ICON_XL } from '../lib/icons';
 import { isFutureEvent } from '../lib/dates';
 import { fetchEventIfMissing, submitRegistration, useEvent } from '../lib/store';
 import { eventThemeVars } from '../lib/theme';
@@ -100,32 +100,9 @@ export default function EventLandingPage() {
           <p style={{ fontSize: '1.05rem', textAlign: 'center', marginBottom: 'var(--space-8)' }}>{reg.note}</p>
         )}
 
-        {/* Organiser-composed content blocks (the microsite) */}
-        <EventContent blocks={blocks} />
-
-        {/* Prizes up for grabs (pre-event teaser; winners hidden until results) */}
-        {(() => {
-          const prizes = effectiveAwards(event).filter((a) => a.prize);
-          if (!prizes.length) return null;
-          return (
-            <section style={{ marginBottom: 'var(--space-10)' }}>
-              <h2 style={{ textAlign: 'center', marginBottom: 'var(--space-5)' }}>Prizes up for grabs</h2>
-              <div className="grid-cards" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
-                {prizes.map((a) => (
-                  <Card key={a.id} style={{ textAlign: 'center' }}>
-                    <div style={{ color: 'var(--rm-accent, var(--rm-green-fairway))', display: 'flex', justifyContent: 'center', marginBottom: 6 }}>
-                      <TrophyIcon size={ICON_SM} />
-                    </div>
-                    <div style={{ fontWeight: 700, fontFamily: 'var(--font-heading)' }}>
-                      {a.title}{a.hole ? ` — hole ${a.hole}` : ''}
-                    </div>
-                    <div className="text-muted" style={{ marginTop: 2 }}>{a.prize}</div>
-                  </Card>
-                ))}
-              </div>
-            </section>
-          );
-        })()}
+        {/* Organiser-composed content blocks (the microsite); the optional
+            'prizes' block renders the prize-bearing awards. */}
+        <EventContent blocks={blocks} awards={effectiveAwards(event)} />
 
         {/* Registration */}
         <div id="register" style={{ scrollMarginTop: 'var(--space-6)' }}>

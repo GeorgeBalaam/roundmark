@@ -52,7 +52,7 @@ export function EventPageHero({ event, preview }: { event: RoundmarkEvent; previ
           </p>
         )}
         <p style={{ color: headerText, opacity: 0.85, margin: 0, fontSize: '1.1rem' }}>
-          {formatDate(event.date)} · {event.venue || 'Venue to be confirmed'}
+          {formatDate(event.date)}{event.startTime ? ` · ${event.startTime}` : ''} · {event.venue || 'Venue to be confirmed'}
         </p>
         <p style={{ color: headerText, opacity: 0.75, margin: '4px 0 0' }}>
           {FORMAT_LABELS[event.format]}

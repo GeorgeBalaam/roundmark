@@ -34,6 +34,13 @@ export default function InfoStep({ event }: { event: RoundmarkEvent }) {
           onChange={(e) => set('date', e.target.value)}
         />
         <FormField
+          label="Start time"
+          type="time"
+          hint="When the day kicks off (shown on the event page)."
+          value={event.startTime ?? ''}
+          onChange={(e) => set('startTime', e.target.value || undefined)}
+        />
+        <FormField
           label="Venue / course name"
           required
           placeholder="e.g. Fairhaven Golf Club"

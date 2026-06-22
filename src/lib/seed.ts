@@ -164,6 +164,7 @@ export function buildSeedDB(): RoundmarkDB {
     id: 'demo-live',
     name: 'Roundmark Demo Golf Day',
     date: today,
+    startTime: '08:30',
     venue: 'Demo Fairway Golf Club',
     type: 'company',
     format: 'stableford',
@@ -217,6 +218,11 @@ export function buildSeedDB(): RoundmarkDB {
         href: 'https://example.com',
       },
       {
+        id: 'demo-bp',
+        type: 'prizes',
+        title: 'Prizes up for grabs',
+      },
+      {
         id: 'demo-b2',
         type: 'schedule',
         title: 'Running order',
@@ -255,6 +261,7 @@ export function buildSeedDB(): RoundmarkDB {
     id: 'demo-completed',
     name: 'Ferncroft Spring Scramble',
     date: lastMonth,
+    startTime: '09:00',
     venue: 'Demo Fairway Golf Club',
     type: 'charity',
     format: 'scramble',

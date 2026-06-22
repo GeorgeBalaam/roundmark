@@ -3,9 +3,9 @@
 
 import { useState } from 'react';
 import { Button } from './ui';
-import { DisclosureIcon, NearestPinIcon, ICON_SM } from '../lib/icons';
+import { DisclosureIcon, NearestPinIcon, TrophyIcon, ICON_SM } from '../lib/icons';
 import { videoEmbedUrl, mapsSearchUrl } from '../lib/video';
-import type { EventBlock, VideoProvider } from '../lib/types';
+import type { Award, EventBlock, VideoProvider } from '../lib/types';
 
 function TextBlock({ title, body }: { title?: string; body: string }) {
   return (
@@ -189,12 +189,38 @@ function FaqBlock({ title, items }: { title?: string; items: { id: string; q: st
   );
 }
 
-export function EventContent({ blocks }: { blocks: EventBlock[] }) {
+function PrizesBlock({ title, awards }: { title?: string; awards: Award[] }) {
+  // Pre-event teaser: prizes only, winners stay hidden until results.
+  const withPrizes = awards.filter((a) => a.prize);
+  if (!withPrizes.length) return null;
+  return (
+    <section style={{ marginBottom: 'var(--space-10)' }}>
+      <h2 style={{ textAlign: 'center', marginBottom: 'var(--space-5)' }}>{title || 'Prizes up for grabs'}</h2>
+      <div className="grid-cards" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+        {withPrizes.map((a) => (
+          <div key={a.id} className="card" style={{ textAlign: 'center' }}>
+            <div style={{ color: 'var(--rm-accent, var(--rm-green-fairway))', display: 'flex', justifyContent: 'center', marginBottom: 6 }}>
+              <TrophyIcon size={ICON_SM} />
+            </div>
+            <div style={{ fontWeight: 700, fontFamily: 'var(--font-heading)' }}>
+              {a.title}{a.hole ? ` — hole ${a.hole}` : ''}
+            </div>
+            <div className="text-muted" style={{ marginTop: 2 }}>{a.prize}</div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+export function EventContent({ blocks, awards = [] }: { blocks: EventBlock[]; awards?: Award[] }) {
   if (!blocks.length) return null;
   return (
     <div className="event-content">
       {blocks.map((block) => {
         switch (block.type) {
+          case 'prizes':
+            return <PrizesBlock key={block.id} title={block.title} awards={awards} />;
           case 'text':
             return <TextBlock key={block.id} title={block.title} body={block.body} />;
           case 'image':

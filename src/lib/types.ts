@@ -205,7 +205,8 @@ export type EventBlock =
   | { id: string; type: 'video'; provider: VideoProvider; videoId: string; title?: string }
   | { id: string; type: 'venue'; title?: string; address: string; mapUrl?: string }
   | { id: string; type: 'schedule'; title?: string; items: ScheduleItem[] }
-  | { id: string; type: 'faq'; title?: string; items: FaqItem[] };
+  | { id: string; type: 'faq'; title?: string; items: FaqItem[] }
+  | { id: string; type: 'prizes'; title?: string };
 
 export type EventBlockType = EventBlock['type'];
 
@@ -219,6 +220,7 @@ export const EVENT_BLOCK_META: Record<EventBlockType, { label: string; descripti
   venue: { label: 'Venue & map', description: 'An address with a directions link.' },
   schedule: { label: 'Schedule', description: 'A timeline of the day.' },
   faq: { label: 'FAQs', description: 'Expandable questions and answers.' },
+  prizes: { label: 'Prizes', description: 'Shows the prizes from your Awards step.' },
 };
 
 export interface RoundmarkEvent {
@@ -227,6 +229,8 @@ export interface RoundmarkEvent {
   ownerId?: string;
   name: string;
   date: string; // ISO date (yyyy-mm-dd)
+  /** Optional start time of the day, "HH:MM" (24h). */
+  startTime?: string;
   venue: string;
   type: EventType;
   format: ScoringFormat;

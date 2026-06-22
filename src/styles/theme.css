@@ -1144,6 +1144,12 @@ svg.lucide { flex-shrink: 0; vertical-align: -0.125em; }
 .live-announce-close { background: none; border: none; color: #cfe0c4; cursor: pointer; padding: 0; display: inline-flex; flex-shrink: 0; }
 .live-announce-close:hover { color: #fff; }
 
+/* ---------- Event-page builder: schedule editor rows ---------- */
+
+.schedule-rows { display: flex; flex-direction: column; gap: var(--space-4); }
+.schedule-row { display: flex; gap: var(--space-3); align-items: center; }
+.schedule-time { max-width: 130px; flex-shrink: 0; }
+
 /* ---------- Event-page builder: block cards ---------- */
 
 .block-card { padding: var(--space-4) var(--space-5); }

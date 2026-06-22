@@ -12,9 +12,10 @@ import { EventContent } from '../../components/EventContent';
 import {
   AddIcon, CloseIcon, MoveUpIcon, MoveDownIcon, EventIcon, DisclosureIcon, DuplicateIcon,
   DesktopIcon, MobileIcon, OpenExternalIcon, TextBlockIcon, ImageBlockIcon, FeatureBlockIcon,
-  ButtonBlockIcon, VideoBlockIcon, MapPinIcon, ScheduleBlockIcon, FaqBlockIcon, ICON_SM,
+  ButtonBlockIcon, VideoBlockIcon, MapPinIcon, ScheduleBlockIcon, FaqBlockIcon, TrophyIcon, ICON_SM,
 } from '../../lib/icons';
 import { makeId, updateEvent } from '../../lib/store';
+import { effectiveAwards } from '../../lib/awards';
 import { eventLandingUrl, eventLandingPath } from '../../lib/links';
 import { eventThemeVars } from '../../lib/theme';
 import { parseVideoUrl } from '../../lib/video';
@@ -30,10 +31,11 @@ const BLOCK_ICONS: Record<EventBlockType, LucideIcon> = {
   venue: MapPinIcon,
   schedule: ScheduleBlockIcon,
   faq: FaqBlockIcon,
+  prizes: TrophyIcon,
 };
 
 // Order shown in the "Add a section" grid.
-const BLOCK_PALETTE: EventBlockType[] = ['text', 'feature', 'image', 'cta', 'video', 'venue', 'schedule', 'faq'];
+const BLOCK_PALETTE: EventBlockType[] = ['text', 'feature', 'image', 'cta', 'video', 'venue', 'schedule', 'prizes', 'faq'];
 
 type PreviewDevice = 'desktop' | 'mobile';
 
@@ -48,6 +50,7 @@ function newBlock(type: EventBlockType): EventBlock {
     case 'venue': return { id, type: 'venue', title: 'Getting there', address: '', mapUrl: '' };
     case 'schedule': return { id, type: 'schedule', title: 'Schedule', items: [] };
     case 'faq': return { id, type: 'faq', title: 'FAQs', items: [] };
+    case 'prizes': return { id, type: 'prizes', title: 'Prizes up for grabs' };
   }
 }
 
@@ -63,6 +66,7 @@ function blockSummary(block: EventBlock): string {
     case 'venue': return block.address.trim().split('\n')[0] || 'Venue';
     case 'schedule': return `${block.items.length} time${block.items.length === 1 ? '' : 's'}`;
     case 'faq': return `${block.items.length} question${block.items.length === 1 ? '' : 's'}`;
+    case 'prizes': return 'Prizes';
   }
 }
 
@@ -255,7 +259,7 @@ export default function PageStep({ event }: { event: RoundmarkEvent }) {
                 {event.registration?.note && (
                   <p style={{ textAlign: 'center', marginBottom: 'var(--space-6)' }}>{event.registration.note}</p>
                 )}
-                <EventContent blocks={blocks} />
+                <EventContent blocks={blocks} awards={effectiveAwards(event)} />
                 {event.sponsors.length > 0 && <SponsorStrip sponsors={event.sponsors} />}
               </div>
               <div className="preview-stub">Registration form appears here (configured on the Sign-ups step).</div>
@@ -325,22 +329,44 @@ function BlockEditor({ block, eventId, onChange }: { block: EventBlock; eventId:
   }
   if (block.type === 'schedule') {
     return (
-      <div className="stack-3">
+      <div className="stack-4">
         <FormField label="Heading" value={block.title ?? ''} onChange={(e) => onChange({ ...block, title: e.target.value })} />
-        {block.items.map((it) => (
-          <div key={it.id} className="row" style={{ gap: 'var(--space-3)', alignItems: 'center' }}>
-            <input className="input" style={{ maxWidth: 120 }} placeholder="09:00" value={it.time}
-              onChange={(e) => onChange({ ...block, items: block.items.map((x) => (x.id === it.id ? { ...x, time: e.target.value } : x)) })} />
-            <input className="input grow" placeholder="Registration & bacon rolls" value={it.label}
-              onChange={(e) => onChange({ ...block, items: block.items.map((x) => (x.id === it.id ? { ...x, label: e.target.value } : x)) })} />
-            <Button size="sm" variant="ghost" aria-label="Remove item" onClick={() => onChange({ ...block, items: block.items.filter((x) => x.id !== it.id) })}>
-              <CloseIcon size={ICON_SM} />
-            </Button>
-          </div>
-        ))}
+        <div className="schedule-rows">
+          {block.items.map((it) => (
+            <div key={it.id} className="schedule-row">
+              <input
+                type="time"
+                className="input schedule-time"
+                value={it.time}
+                aria-label="Time"
+                onChange={(e) => onChange({ ...block, items: block.items.map((x) => (x.id === it.id ? { ...x, time: e.target.value } : x)) })}
+              />
+              <input
+                className="input grow"
+                placeholder="Registration & bacon rolls"
+                value={it.label}
+                aria-label="What's happening"
+                onChange={(e) => onChange({ ...block, items: block.items.map((x) => (x.id === it.id ? { ...x, label: e.target.value } : x)) })}
+              />
+              <Button size="sm" variant="ghost" aria-label="Remove item" onClick={() => onChange({ ...block, items: block.items.filter((x) => x.id !== it.id) })}>
+                <CloseIcon size={ICON_SM} />
+              </Button>
+            </div>
+          ))}
+        </div>
         <Button size="sm" variant="secondary" onClick={() => onChange({ ...block, items: [...block.items, { id: makeId(), time: '', label: '' }] })}>
           <AddIcon size={ICON_SM} /> Add time
         </Button>
+      </div>
+    );
+  }
+  if (block.type === 'prizes') {
+    return (
+      <div className="stack-3">
+        <FormField label="Heading" value={block.title ?? ''} onChange={(e) => onChange({ ...block, title: e.target.value })} />
+        <p className="text-small text-muted" style={{ margin: 0 }}>
+          Automatically lists the prizes from your <strong>Awards &amp; prizes</strong> step. Winners stay hidden until the results are out. Add a prize there and it appears here.
+        </p>
       </div>
     );
   }
