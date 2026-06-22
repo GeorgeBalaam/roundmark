@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { IndividualStandingsTable, LeaderboardTable } from '../components/leaderboard';
 import { Badge, Button, Logo, ProvisionalBadge, SponsorStrip } from '../components/ui';
+import { LiveAnnouncements } from '../components/LiveAnnouncements';
 import { eventProgress } from '../lib/scoring';
 import { eventThemeVars, readableTextOn } from '../lib/theme';
 import { fetchEventIfMissing, useEvent } from '../lib/store';
@@ -50,6 +51,7 @@ export default function LeaderboardPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--rm-bg)', ...eventThemeVars(event) }}>
+      <LiveAnnouncements eventId={event.id} />
       {/* Branded header */}
       <header style={{ background: headerBg, color: headerText, padding: 'var(--space-8) 0 var(--space-6)' }}>
         <div className="container">

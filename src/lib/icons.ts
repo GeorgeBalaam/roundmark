@@ -85,4 +85,7 @@ export {
   // Multi-organiser / access
   UserPlus as InviteIcon,
   Crown as OwnerIcon,
+
+  // Live broadcast announcements
+  Megaphone as AnnounceIcon,
 } from 'lucide-react';

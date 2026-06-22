@@ -10,6 +10,7 @@ import type {
   AccountSettings,
   AuditEntry,
   EventMembership,
+  EventMessage,
   Player,
   Registration,
   RegistrationSettings,
@@ -167,6 +168,7 @@ function loadLocal(): RoundmarkDB {
       if (!db.accountSettings) db.accountSettings = {};
       if (!db.memberships) db.memberships = [];
       if (!db.eventPasses) db.eventPasses = [];
+      if (!db.eventMessages) db.eventMessages = [];
       return db;
     }
   } catch {
@@ -975,6 +977,19 @@ function startRealtime() {
         });
       },
     )
+    .on(
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'event_messages' },
+      (payload) => {
+        const row = payload.new as { id: string; event_id: string; body: string; created_at: string } | null;
+        if (!row?.id) return;
+        mutate((db) => {
+          if (!db.eventMessages) db.eventMessages = [];
+          if (db.eventMessages.some((m) => m.id === row.id)) return;
+          db.eventMessages.push({ id: row.id, eventId: row.event_id, body: row.body, at: row.created_at });
+        });
+      },
+    )
     .subscribe((status) => {
       if (status === 'SUBSCRIBED') {
         // Reconnected — flush anything queued while offline.
@@ -1088,6 +1103,52 @@ export async function upgradeToAnnual(): Promise<string | null> {
   mutate((db) => { if (db.session) db.session = { ...db.session, plan: 'annual' }; });
   if (!isSupabaseConfigured || !supabase || !currentUserId) return null;
   const { error } = await supabase.from('profiles').update({ plan: 'annual' }).eq('id', currentUserId);
+  return error ? error.message : null;
+}
+
+// --- Live messaging (organiser broadcast) ----------------------------------
+
+/** Announcements received for an event, newest first. */
+export function useEventMessages(eventId: string | undefined): EventMessage[] {
+  const db = useDB();
+  if (!eventId) return [];
+  return (db.eventMessages ?? [])
+    .filter((m) => m.eventId === eventId)
+    .sort((a, b) => b.at.localeCompare(a.at));
+}
+
+/** Load recent announcements for an event (so a device joining mid-day sees them). */
+export async function loadEventMessages(eventId: string) {
+  if (!isSupabaseConfigured || !supabase || eventId.startsWith('demo-')) return;
+  const { data } = await supabase
+    .from('event_messages')
+    .select('id, event_id, body, created_at')
+    .eq('event_id', eventId)
+    .order('created_at', { ascending: false })
+    .limit(20);
+  if (!data) return;
+  mutate((db) => {
+    if (!db.eventMessages) db.eventMessages = [];
+    for (const r of data as Array<Record<string, string>>) {
+      if (!db.eventMessages.some((m) => m.id === r.id)) {
+        db.eventMessages.push({ id: r.id, eventId: r.event_id, body: r.body, at: r.created_at });
+      }
+    }
+  });
+}
+
+/** Send an organiser broadcast to every device connected to the event. */
+export async function sendEventMessage(eventId: string, body: string): Promise<string | null> {
+  const text = body.trim();
+  if (!text) return 'Message is empty';
+  if (!isSupabaseConfigured || !supabase || eventId.startsWith('demo-')) {
+    mutate((db) => {
+      if (!db.eventMessages) db.eventMessages = [];
+      db.eventMessages.push({ id: makeId(), eventId, body: text, at: new Date().toISOString() });
+    });
+    return null;
+  }
+  const { error } = await supabase.from('event_messages').insert({ event_id: eventId, body: text });
   return error ? error.message : null;
 }
 

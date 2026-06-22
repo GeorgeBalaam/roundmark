@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Logo, ProvisionalBadge, SponsorStrip } from '../components/ui';
+import { LiveAnnouncements } from '../components/LiveAnnouncements';
 import { computeTeamStandings, formatToPar } from '../lib/scoring';
 import { fetchEventIfMissing, useEvent } from '../lib/store';
 import { FORMAT_LABELS } from '../lib/types';
@@ -43,6 +44,7 @@ export default function TVPage() {
 
   return (
     <div className="tv-root">
+      <LiveAnnouncements eventId={event.id} />
       <header className="row-between" style={{ marginBottom: '2.5vh' }}>
         <div className="row" style={{ gap: '1.5vw' }}>
           {event.logoUrl ? (

@@ -15,17 +15,64 @@ import {
   ProvisionalBadge,
   SelectField,
   StatCard,
+  TextAreaField,
 } from '../components/ui';
 import { useToast } from '../components/toast-context';
-import { ResumeIcon, PauseIcon, LockIcon, DownloadIcon, CheckIcon, ICON_SM } from '../lib/icons';
+import { ResumeIcon, PauseIcon, LockIcon, DownloadIcon, CheckIcon, AnnounceIcon, ICON_SM } from '../lib/icons';
 import { buildResultsCSV, downloadCSV } from '../lib/csv';
 import { lockResults, unlockResults } from '../lib/events';
 import { eventProgress } from '../lib/scoring';
-import { addAudit, updateEvent, useDB, useEvent } from '../lib/store';
+import { addAudit, updateEvent, useDB, useEvent, sendEventMessage, useEventMessages } from '../lib/store';
 import { resolveAwardWinner, isManualAward } from '../lib/awards';
 import type { RoundmarkEvent, ScoreCell, Team } from '../lib/types';
 
 const ADMIN_NAME = 'Demo Organiser';
+
+function AnnouncementCard({ eventId }: { eventId: string }) {
+  const toast = useToast();
+  const messages = useEventMessages(eventId);
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  async function send() {
+    if (!text.trim()) return;
+    setBusy(true);
+    const err = await sendEventMessage(eventId, text);
+    setBusy(false);
+    if (err) { toast(`Couldn't send: ${err}`, 'error'); return; }
+    setText('');
+    toast('Announcement sent to all devices', 'success');
+  }
+
+  return (
+    <Card padLg style={{ marginBottom: 'var(--space-8)', maxWidth: 720 }}>
+      <h3 style={{ marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <AnnounceIcon size={ICON_SM} /> Announcements
+      </h3>
+      <p className="text-muted text-small">
+        Send a message to every phone, leaderboard and TV connected to the event — "lunch is served", "tee-off delayed", "results shortly".
+      </p>
+      <div className="stack-3" style={{ marginTop: 'var(--space-4)' }}>
+        <TextAreaField label="Message" rows={2} placeholder="e.g. Lunch is served in the clubhouse" value={text} onChange={(e) => setText(e.target.value)} />
+        <div>
+          <Button onClick={send} disabled={busy || !text.trim()}>
+            <AnnounceIcon size={ICON_SM} /> {busy ? 'Sending…' : 'Send to all devices'}
+          </Button>
+        </div>
+      </div>
+      {messages.length > 0 && (
+        <div className="stack-2" style={{ marginTop: 'var(--space-5)' }}>
+          <div className="text-small" style={{ fontWeight: 600, color: 'var(--rm-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Recent</div>
+          {messages.slice(0, 5).map((m) => (
+            <div key={m.id} className="text-small" style={{ paddingBottom: 6, borderBottom: '1px solid var(--rm-border-soft)' }}>
+              <span style={{ color: 'var(--rm-muted)' }}>{new Date(m.at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span> — {m.body}
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
+  );
+}
 
 function cellToText(cell: ScoreCell): string {
   if (cell === null) return '';
@@ -352,6 +399,9 @@ export default function ConsolePage() {
           );
         })}
       </div>
+
+      {/* Live announcements */}
+      <AnnouncementCard eventId={event.id} />
 
       {/* Awards & prizes */}
       <Card padLg style={{ marginBottom: 'var(--space-8)', maxWidth: 720 }}>

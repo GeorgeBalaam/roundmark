@@ -4,6 +4,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Badge, Button, ConfirmDialog, Logo, SponsorStrip } from '../components/ui';
+import { LiveAnnouncements } from '../components/LiveAnnouncements';
 import { useToast } from '../components/toast-context';
 import { LockIcon, CheckIcon, ICON_SM } from '../lib/icons';
 import { stablefordPoints } from '../lib/scoring';
@@ -206,6 +207,7 @@ export default function ScorecardPage() {
 
   return (
     <div className="score-shell" style={eventThemeVars(event)}>
+      <LiveAnnouncements eventId={event.id} />
       {/* Event header */}
       <div className="row-between" style={{ paddingTop: 'var(--space-2)' }}>
         {event.logoUrl ? (

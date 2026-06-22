@@ -293,6 +293,14 @@ export interface EventMembership {
   playerId?: string;
 }
 
+/** An organiser broadcast shown live on every device connected to the event. */
+export interface EventMessage {
+  id: string;
+  eventId: string;
+  body: string;
+  at: string; // ISO timestamp
+}
+
 export interface RoundmarkDB {
   version: number;
   events: RoundmarkEvent[];
@@ -303,6 +311,8 @@ export interface RoundmarkDB {
   memberships?: EventMembership[];
   /** Event ids the signed-in user holds a go-live pass for (entitlements). */
   eventPasses?: string[];
+  /** Live organiser broadcasts received for events being viewed. */
+  eventMessages?: EventMessage[];
   /**
    * Signed-in user. role drives which dashboard + features they get; plan is the
    * entitlements bundle id (undefined = the default 'full' plan for now).
