@@ -22,7 +22,7 @@ import { ResumeIcon, PauseIcon, LockIcon, DownloadIcon, CheckIcon, AnnounceIcon,
 import { buildResultsCSV, downloadCSV } from '../lib/csv';
 import { lockResults, unlockResults } from '../lib/events';
 import { eventProgress } from '../lib/scoring';
-import { addAudit, updateEvent, useDB, useEvent, sendEventMessage, useEventMessages } from '../lib/store';
+import { addAudit, updateEvent, updateScorecard, useDB, useEvent, sendEventMessage, useEventMessages } from '../lib/store';
 import { resolveAwardWinner, isManualAward } from '../lib/awards';
 import type { RoundmarkEvent, ScoreCell, Team } from '../lib/types';
 
@@ -114,9 +114,7 @@ function ScoreCellInput({
       return;
     }
     if (next === value) return;
-    updateEvent(event.id, (e) => {
-      const card = e.scorecards[team.id];
-      if (!card) return;
+    updateScorecard(event.id, team.id, (card) => {
       if (playerId) {
         card.playerScores[playerId][hole - 1] = next;
       } else {
@@ -130,7 +128,6 @@ function ScoreCellInput({
           : false;
         if (!anyLeft) card.submittedHoles = card.submittedHoles.filter((h) => h !== hole);
       }
-      card.updatedAt = new Date().toISOString();
     });
     addAudit({
       eventId: event.id,

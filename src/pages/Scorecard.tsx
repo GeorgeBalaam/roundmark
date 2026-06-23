@@ -9,7 +9,7 @@ import { useToast } from '../components/toast-context';
 import { LockIcon, CheckIcon, ICON_SM } from '../lib/icons';
 import { stablefordPoints } from '../lib/scoring';
 import { eventThemeVars } from '../lib/theme';
-import { fetchEventIfMissing, updateEvent, useEvent } from '../lib/store';
+import { fetchEventIfMissing, updateScorecard, useEvent } from '../lib/store';
 import type { RoundmarkEvent, ScoreCell, Team } from '../lib/types';
 import { FORMAT_LABELS } from '../lib/types';
 
@@ -173,19 +173,16 @@ export default function ScorecardPage() {
 
   function persistHole() {
     if (!event || !team || !hole) return;
-    updateEvent(event.id, (e) => {
-      const c = e.scorecards[team.id];
-      if (!c) return;
-      if (e.format === 'scramble') {
+    updateScorecard(event.id, team.id, (c) => {
+      if (event.format === 'scramble') {
         c.teamScores[hole.number - 1] = draft.team ?? null;
       } else {
         for (const pid of team.playerIds) {
-          if (!c.playerScores[pid]) c.playerScores[pid] = e.holes.map(() => null);
+          if (!c.playerScores[pid]) c.playerScores[pid] = event.holes.map(() => null);
           c.playerScores[pid][hole.number - 1] = draft[pid] ?? null;
         }
       }
       if (!c.submittedHoles.includes(hole.number)) c.submittedHoles.push(hole.number);
-      c.updatedAt = new Date().toISOString();
     });
     toast(`Hole ${hole.number} saved`, 'success');
     // Advance to the next unplayed hole.

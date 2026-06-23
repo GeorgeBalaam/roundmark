@@ -319,6 +319,28 @@ export function updateEvent(eventId: string, fn: (event: RoundmarkEvent) => void
   }
 }
 
+/**
+ * Update one team's scorecard and sync *just that card* — the live-scoring hot
+ * path. A score save is a tiny single-row write that never waits on (or fails
+ * with) the whole event aggregate, so it lands fast and the leaderboard updates
+ * promptly even on a flaky course connection.
+ */
+export function updateScorecard(eventId: string, teamId: string, fn: (sc: Scorecard) => void) {
+  let changed = false;
+  applyMutation((db) => {
+    const event = db.events.find((e) => e.id === eventId);
+    const sc = event?.scorecards[teamId];
+    if (!sc) return;
+    fn(sc);
+    sc.updatedAt = new Date().toISOString();
+    changed = true;
+  });
+  if (changed) {
+    schedulePersist();
+    enqueue({ kind: 'scorecard', eventId, teamId });
+  }
+}
+
 export function addAudit(entry: Omit<AuditEntry, 'id' | 'at'>) {
   const full: AuditEntry = { ...entry, id: makeId(), at: new Date().toISOString() };
   mutate((db) => { db.auditLogs.unshift(full); });
@@ -371,6 +393,18 @@ async function pushEventToSupabase(event: RoundmarkEvent) {
   }
 }
 
+/** Push a single scorecard (the hot path for live scoring — small, fast write so
+ *  a score save never waits on the whole event aggregate). Throws so the outbox
+ *  retries. */
+async function pushScorecardToSupabase(eventId: string, teamId: string) {
+  if (!supabase || eventId.startsWith('demo-')) return;
+  const event = getDB().events.find((e) => e.id === eventId);
+  const sc = event?.scorecards[teamId];
+  if (!sc) return;
+  const { error } = await supabase.from('scorecards').upsert(rowFromScorecard(eventId, sc));
+  if (error) throw new Error(`scorecard upsert: ${error.message}`);
+}
+
 async function pushAuditToSupabase(entry: AuditEntry) {
   if (!supabase || entry.eventId.startsWith('demo-')) return;
   const { error } = await supabase.from('audit_logs').insert({
@@ -396,6 +430,7 @@ async function pushAuditToSupabase(entry: AuditEntry) {
 
 type OutboxOp =
   | { id: string; kind: 'event'; eventId: string }
+  | { id: string; kind: 'scorecard'; eventId: string; teamId: string }
   | { id: string; kind: 'audit'; entry: AuditEntry }
   | { id: string; kind: 'registration'; regId: string };
 
@@ -438,11 +473,12 @@ function persistOutbox() {
 }
 
 function opKey(op: OutboxOp): string {
-  return op.kind === 'event'
-    ? `event:${op.eventId}`
-    : op.kind === 'registration'
-      ? `reg:${op.regId}`
-      : `audit:${op.entry.id}`;
+  switch (op.kind) {
+    case 'event': return `event:${op.eventId}`;
+    case 'scorecard': return `scorecard:${op.eventId}:${op.teamId}`;
+    case 'registration': return `reg:${op.regId}`;
+    case 'audit': return `audit:${op.entry.id}`;
+  }
 }
 
 function enqueue(op: NewOutboxOp) {
@@ -461,6 +497,8 @@ async function runOp(op: OutboxOp): Promise<void> {
   if (op.kind === 'event') {
     const event = getDB().events.find((e) => e.id === op.eventId);
     if (event) await pushEventToSupabase(event);
+  } else if (op.kind === 'scorecard') {
+    await pushScorecardToSupabase(op.eventId, op.teamId);
   } else if (op.kind === 'audit') {
     await pushAuditToSupabase(op.entry);
   } else if (op.kind === 'registration') {
