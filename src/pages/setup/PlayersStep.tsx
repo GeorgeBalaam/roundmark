@@ -3,8 +3,8 @@
 import { useRef, useState } from 'react';
 import { Badge, Button, Card, EmptyState, FormField, SelectField, TextAreaField } from '../../components/ui';
 import { useToast } from '../../components/toast-context';
-import { TeamsIcon } from '../../lib/icons';
-import { PLAYER_IMPORT_SAMPLE, parsePlayerImport } from '../../lib/csv';
+import { TeamsIcon, DownloadIcon, ICON_SM } from '../../lib/icons';
+import { PLAYER_IMPORT_SAMPLE, parsePlayerImport, downloadCSV } from '../../lib/csv';
 import { syncScorecards } from '../../lib/events';
 import { makeId, updateEvent } from '../../lib/store';
 import type { Player, RoundmarkEvent } from '../../lib/types';
@@ -195,6 +195,9 @@ export default function PlayersStep({ event }: { event: RoundmarkEvent }) {
             </Button>
             <Button variant="ghost" onClick={() => fileRef.current?.click()}>
               Upload CSV file
+            </Button>
+            <Button variant="ghost" onClick={() => downloadCSV('roundmark-players-template.csv', PLAYER_IMPORT_SAMPLE)}>
+              <DownloadIcon size={ICON_SM} /> Download template
             </Button>
             <Button variant="ghost" size="sm" onClick={() => setImportText(PLAYER_IMPORT_SAMPLE)}>
               Show sample

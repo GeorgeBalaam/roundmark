@@ -34,10 +34,10 @@
   --font-heading: 'Instrument Sans', 'Inter', system-ui, -apple-system, sans-serif;
   --font-body: 'Inter', system-ui, -apple-system, sans-serif;
 
-  /* Shape */
-  --radius-sm: 8px;
-  --radius-card: 16px;
-  --radius-lg: 24px;
+  /* Shape — kept fairly sharp/modern, not pillowy */
+  --radius-sm: 6px;
+  --radius-card: 10px;
+  --radius-lg: 16px;
   --radius-pill: 999px;
 
   /* Elevation — subtle only */
@@ -579,8 +579,9 @@ button { font-family: inherit; }
   background: var(--rm-card);
   border-bottom: 1px solid var(--rm-border-soft);
 }
+/* On desktop the sidebar is the only nav — the top bar is mobile-only. */
 @media (min-width: 900px) {
-  .app-topbar .topbar-logo { display: none; }
+  .app-topbar { display: none; }
 }
 
 .page-header {

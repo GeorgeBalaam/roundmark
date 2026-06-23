@@ -9,12 +9,14 @@ import { Badge, Button, Logo, ProvisionalBadge, SponsorStrip } from '../componen
 import { LiveAnnouncements } from '../components/LiveAnnouncements';
 import { eventProgress } from '../lib/scoring';
 import { eventThemeVars, readableTextOn } from '../lib/theme';
-import { fetchEventIfMissing, useEvent } from '../lib/store';
+import { fetchEventIfMissing, useEvent, useRole } from '../lib/store';
 import { FORMAT_LABELS } from '../lib/types';
 
 export default function LeaderboardPage() {
   const { eventId } = useParams();
   const event = useEvent(eventId);
+  const role = useRole();
+  const isOrganiser = role === 'organiser' || role === 'admin';
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
@@ -61,11 +63,16 @@ export default function LeaderboardPage() {
             ) : (
               <Logo variant={useWhiteLogo ? 'horizontal-white' : 'horizontal'} height={30} />
             )}
-            <div className="row no-print">
-              <Button variant="secondary" size="sm" to={`/tv/${event.id}`}>
-                TV mode
-              </Button>
-            </div>
+            {isOrganiser && (
+              <div className="row no-print">
+                <Button variant="secondary" size="sm" to={`/app/event/${event.id}/console`}>
+                  Back to console
+                </Button>
+                <Button variant="secondary" size="sm" to={`/tv/${event.id}`}>
+                  TV mode
+                </Button>
+              </div>
+            )}
           </div>
           <h1 style={{ color: headerText, marginTop: 'var(--space-5)', marginBottom: 4 }}>{event.name}</h1>
           <p style={{ color: headerSubText, margin: 0 }}>

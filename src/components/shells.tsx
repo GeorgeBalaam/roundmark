@@ -71,7 +71,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
           </NavLink>
         </nav>
         <div style={{ marginTop: 'auto' }} className="stack-2">
-          <div className="text-small" style={{ color: '#9fb894' }}>
+          <div className="text-small" style={{ color: '#9fb894', overflowWrap: 'anywhere' }}>
             {db.session?.organiserName ?? 'Demo Organiser'}
           </div>
           <button
