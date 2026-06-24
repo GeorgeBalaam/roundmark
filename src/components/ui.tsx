@@ -466,14 +466,43 @@ export function ConfirmDialog({
 
 // ---------- Sponsor strip ----------
 
-export function SponsorStrip({
-  sponsors,
-  dark,
-}: {
-  sponsors: { id: string; name: string; logoUrl?: string; websiteUrl?: string }[];
-  dark?: boolean;
-}) {
+interface SponsorStripItem {
+  id: string;
+  name: string;
+  logoUrl?: string;
+  websiteUrl?: string;
+  slot?: number;
+  tier?: string;
+  headline?: boolean;
+}
+
+export function SponsorStrip({ sponsors, dark }: { sponsors: SponsorStripItem[]; dark?: boolean }) {
   if (sponsors.length === 0) return null;
+  // Headline sponsors first (shown larger), then the rest by slot.
+  const ordered = sponsors
+    .slice()
+    .sort((a, b) => Number(!!b.headline) - Number(!!a.headline) || (a.slot ?? 0) - (b.slot ?? 0));
+
+  const renderItem = (s: SponsorStripItem) => {
+    const logo = s.logoUrl ? (
+      <img src={s.logoUrl} alt={s.name} />
+    ) : (
+      <span style={dark ? { color: '#dfe7d8' } : undefined}>{s.name}</span>
+    );
+    const inner = (
+      <>
+        {s.tier && <span className="sponsor-tier" style={dark ? { color: '#9fb894' } : undefined}>{s.tier}</span>}
+        {logo}
+      </>
+    );
+    const cls = `sponsor-item ${s.headline ? 'sponsor-item--headline' : ''}`;
+    return s.websiteUrl ? (
+      <a key={s.id} className={cls} href={s.websiteUrl} target="_blank" rel="noreferrer">{inner}</a>
+    ) : (
+      <span key={s.id} className={cls}>{inner}</span>
+    );
+  };
+
   return (
     <div
       className="sponsor-strip"
@@ -482,25 +511,7 @@ export function SponsorStrip({
       <span className="sponsor-label" style={dark ? { color: '#9fb894' } : undefined}>
         With thanks to our sponsors
       </span>
-      {sponsors
-        .slice()
-        .sort((a, b) => ('slot' in a && 'slot' in b ? (a as { slot: number }).slot - (b as { slot: number }).slot : 0))
-        .map((s) => {
-          const inner = s.logoUrl ? (
-            <img src={s.logoUrl} alt={s.name} />
-          ) : (
-            <span style={dark ? { color: '#dfe7d8' } : undefined}>{s.name}</span>
-          );
-          return s.websiteUrl ? (
-            <a key={s.id} className="sponsor-item" href={s.websiteUrl} target="_blank" rel="noreferrer">
-              {inner}
-            </a>
-          ) : (
-            <span key={s.id} className="sponsor-item">
-              {inner}
-            </span>
-          );
-        })}
+      {ordered.map(renderItem)}
     </div>
   );
 }

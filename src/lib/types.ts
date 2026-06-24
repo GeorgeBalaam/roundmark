@@ -49,6 +49,10 @@ export interface Sponsor {
   logoUrl?: string;
   websiteUrl?: string;
   slot: number; // 1-6 display order
+  /** Optional free-text tier label the organiser words themselves (Gold, Main, etc.). */
+  tier?: string;
+  /** Headline sponsors are shown larger and first. */
+  headline?: boolean;
 }
 
 /**

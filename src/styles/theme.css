@@ -661,14 +661,23 @@ button { font-family: inherit; }
 }
 .sponsor-item {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 3px;
   font-family: var(--font-heading);
   font-weight: 600;
   color: #44503f;
   text-decoration: none;
 }
 .sponsor-item img { height: 28px; width: auto; }
+.sponsor-item--headline img { height: 46px; }
+.sponsor-tier {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--rm-muted);
+}
 
 /* ---------- Score entry (mobile-first) ---------- */
 

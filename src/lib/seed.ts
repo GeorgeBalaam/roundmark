@@ -184,9 +184,9 @@ export function buildSeedDB(): RoundmarkDB {
     players: livePlayers,
     teams: liveTeams,
     sponsors: [
-      { id: 'live-s1', name: 'Northbeam Ltd', websiteUrl: 'https://example.com', slot: 1 },
-      { id: 'live-s2', name: 'Atlas Partners', websiteUrl: 'https://example.com', slot: 2 },
-      { id: 'live-s3', name: 'Brightline', websiteUrl: 'https://example.com', slot: 3 },
+      { id: 'live-s1', name: 'Northbeam Ltd', websiteUrl: 'https://example.com', slot: 1, tier: 'Headline', headline: true },
+      { id: 'live-s2', name: 'Atlas Partners', websiteUrl: 'https://example.com', slot: 2, tier: 'Gold' },
+      { id: 'live-s3', name: 'Brightline', websiteUrl: 'https://example.com', slot: 3, tier: 'Silver' },
     ],
     scorecards: liveScorecards,
     sideComps: { nearestPinHole: 7, longestDriveHole: 13 },

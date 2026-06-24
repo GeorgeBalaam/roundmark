@@ -106,6 +106,23 @@ export default function SponsorsStep({ event }: { event: RoundmarkEvent }) {
                       onChange={(e) => patchSponsor(s.id, { websiteUrl: e.target.value || undefined })}
                     />
                   </div>
+                  <div style={{ minWidth: 140 }}>
+                    <FormField
+                      label="Tier"
+                      placeholder="e.g. Gold, Main"
+                      value={s.tier ?? ''}
+                      onChange={(e) => patchSponsor(s.id, { tier: e.target.value || undefined })}
+                    />
+                  </div>
+                  <label className="row" style={{ gap: 6, paddingBottom: 'var(--space-5)', cursor: 'pointer', whiteSpace: 'nowrap', alignItems: 'center' }}>
+                    <input
+                      type="checkbox"
+                      checked={!!s.headline}
+                      onChange={(e) => patchSponsor(s.id, { headline: e.target.checked || undefined })}
+                      style={{ width: 18, height: 18 }}
+                    />
+                    <span className="text-small">Headline</span>
+                  </label>
                   <div className="row" style={{ paddingBottom: 'var(--space-5)' }}>
                     <Button size="sm" variant="ghost" onClick={() => move(s.id, -1)} disabled={i === 0} aria-label="Move sponsor up">
                       <MoveUpIcon size={ICON_SM} />
