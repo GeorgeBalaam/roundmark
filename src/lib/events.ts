@@ -85,6 +85,7 @@ export function createEvent(partial?: Partial<RoundmarkEvent>): RoundmarkEvent {
     scorecards: {},
     sideComps: {},
     awards: [],
+    showLeaderboard: true,
     createdAt: now,
     updatedAt: now,
     ...partial,

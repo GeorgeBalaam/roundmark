@@ -1,8 +1,9 @@
 // Wizard step 6: QR / magic scoring links per team.
 
-import { Button, EmptyState } from '../../components/ui';
+import { Button, Card, EmptyState } from '../../components/ui';
 import { QRLinkCard } from '../../components/qr';
 import { LinkIcon, PrintIcon, ICON_SM } from '../../lib/icons';
+import { updateEvent } from '../../lib/store';
 import type { RoundmarkEvent } from '../../lib/types';
 
 export default function LinksStep({ event }: { event: RoundmarkEvent }) {
@@ -30,6 +31,24 @@ export default function LinksStep({ event }: { event: RoundmarkEvent }) {
           <PrintIcon size={ICON_SM} /> Print QR sheet
         </Button>
       </div>
+
+      <Card soft>
+        <label className="row" style={{ gap: 'var(--space-3)', alignItems: 'flex-start', cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={event.showLeaderboard ?? true}
+            onChange={(e) => updateEvent(event.id, (ev) => { ev.showLeaderboard = e.target.checked; })}
+            style={{ width: 18, height: 18, marginTop: 2 }}
+          />
+          <span>
+            <strong>Show a live leaderboard link on scorecards</strong>
+            <span className="text-small text-muted" style={{ display: 'block' }}>
+              Scorers can tap to open the live leaderboard in a new tab while they score. Turn off if you'd rather keep it off the scoring screen.
+            </span>
+          </span>
+        </label>
+      </Card>
+
       <div className="grid-cards">
         {event.teams.map((team) => (
           <QRLinkCard key={team.id} event={event} team={team} />

@@ -235,6 +235,8 @@ export interface RoundmarkEvent {
   date: string; // ISO date (yyyy-mm-dd)
   /** Optional start time of the day, "HH:MM" (24h). */
   startTime?: string;
+  /** Show a "live leaderboard" link on players' scorecards. Defaults on (undefined = true). */
+  showLeaderboard?: boolean;
   venue: string;
   type: EventType;
   format: ScoringFormat;

@@ -2,7 +2,7 @@
 // no login, large tap targets, one hole at a time, obvious save state.
 
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { Badge, Button, ConfirmDialog, Logo, SponsorStrip } from '../components/ui';
 import { LiveAnnouncements } from '../components/LiveAnnouncements';
 import { useToast } from '../components/toast-context';
@@ -212,9 +212,11 @@ export default function ScorecardPage() {
         ) : (
           <Logo variant="icon" height={30} />
         )}
-        <Link to={`/leaderboard/${event.id}`} className="btn btn-secondary btn-sm">
-          Leaderboard
-        </Link>
+        {(event.showLeaderboard ?? true) && (
+          <a href={`/leaderboard/${event.id}`} target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-sm">
+            Leaderboard
+          </a>
+        )}
       </div>
       <div style={{ textAlign: 'center', marginTop: 'var(--space-3)' }}>
         <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700 }}>{event.name}</div>
