@@ -1,6 +1,6 @@
 // CSV / paste import for players, and CSV export of results.
 
-import type { Player, RoundmarkEvent } from './types';
+import type { Player, Registration, RoundmarkEvent } from './types';
 import { makeId } from './store';
 import { computePlayerStandings, computeTeamStandings, formatToPar } from './scoring';
 import { FORMAT_LABELS } from './types';
@@ -103,6 +103,35 @@ export function buildResultsCSV(event: RoundmarkEvent): string {
     }
   }
 
+  return out.join('\n');
+}
+
+/** The player roster (with contact details + team), for the organiser. */
+export function buildPlayersCSV(event: RoundmarkEvent): string {
+  const teamByPlayer: Record<string, string> = {};
+  for (const t of event.teams) for (const pid of t.playerIds) teamByPlayer[pid] = t.name;
+  const out: string[] = ['First name,Last name,Email,Company,Handicap,Host/Guest,Team'];
+  for (const p of event.players) {
+    out.push([p.firstName, p.lastName, p.email ?? '', p.company ?? '', p.handicap ?? '', p.role ?? '', teamByPlayer[p.id] ?? ''].map(csvCell).join(','));
+  }
+  return out.join('\n');
+}
+
+/** Public sign-ups / registrations (incl. dietary + contact), for the caterer/organiser. */
+export function buildRegistrationsCSV(registrations: Registration[]): string {
+  const out: string[] = ['First name,Last name,Email,Company,Handicap,Dietary,Phone,Status,Registered'];
+  for (const r of registrations) {
+    out.push([r.firstName, r.lastName, r.email, r.company ?? '', r.handicap ?? '', r.dietary ?? '', r.phone ?? '', r.status, r.createdAt].map(csvCell).join(','));
+  }
+  return out.join('\n');
+}
+
+/** Pre-launch early-access leads (admin). */
+export function buildLeadsCSV(leads: { email: string; name?: string | null; company?: string | null; created_at: string }[]): string {
+  const out: string[] = ['Name,Email,Company,Registered'];
+  for (const l of leads) {
+    out.push([l.name ?? '', l.email, l.company ?? '', l.created_at].map(csvCell).join(','));
+  }
   return out.join('\n');
 }
 

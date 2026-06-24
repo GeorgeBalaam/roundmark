@@ -7,7 +7,9 @@ import { Button, Card, FieldWrap, FormField, PageHeader } from '../components/ui
 import { ImageUpload } from '../components/ImageUpload';
 import { useToast } from '../components/toast-context';
 import { readableTextOn } from '../lib/theme';
-import { updateAccountSettings, useAccountSettings, useSession, useStoreLoading } from '../lib/store';
+import { updateAccountSettings, fetchEarlyAccessLeads, useAccountSettings, useIsAdmin, useSession, useStoreLoading } from '../lib/store';
+import { buildLeadsCSV, downloadCSV } from '../lib/csv';
+import { DownloadIcon, ICON_SM } from '../lib/icons';
 
 type FormState = {
   displayName: string;
@@ -37,9 +39,20 @@ export default function SettingsPage() {
   const loading = useStoreLoading();
   const toast = useToast();
 
+  const isAdmin = useIsAdmin();
   const [form, setForm] = useState<FormState>(() => settingsToForm(settings));
   const [saving, setSaving] = useState(false);
   const [initialized, setInitialized] = useState(false);
+  const [exportingLeads, setExportingLeads] = useState(false);
+
+  async function exportLeads() {
+    setExportingLeads(true);
+    const leads = await fetchEarlyAccessLeads();
+    setExportingLeads(false);
+    if (!leads.length) { toast('No early-access leads yet', 'error'); return; }
+    downloadCSV('roundmark-early-access.csv', buildLeadsCSV(leads));
+    toast(`${leads.length} lead${leads.length === 1 ? '' : 's'} exported`, 'success');
+  }
 
   // Once Supabase has loaded the real settings, sync them into the form once.
   useEffect(() => {
@@ -218,6 +231,20 @@ export default function SettingsPage() {
           </div>
         </Card>
       </form>
+
+      {isAdmin && (
+        <Card padLg style={{ maxWidth: 720, marginTop: 'var(--space-8)' }}>
+          <h3 style={{ marginBottom: 4 }}>Early-access leads</h3>
+          <p className="text-muted text-small" style={{ marginTop: 0 }}>
+            Everyone who registered interest on the coming-soon page. Admin only.
+          </p>
+          <div style={{ marginTop: 'var(--space-4)' }}>
+            <Button variant="secondary" disabled={exportingLeads} onClick={exportLeads}>
+              <DownloadIcon size={ICON_SM} /> {exportingLeads ? 'Preparing…' : 'Export leads CSV'}
+            </Button>
+          </div>
+        </Card>
+      )}
     </DashboardShell>
   );
 }

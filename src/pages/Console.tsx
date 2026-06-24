@@ -19,7 +19,7 @@ import {
 } from '../components/ui';
 import { useToast } from '../components/toast-context';
 import { ResumeIcon, PauseIcon, LockIcon, DownloadIcon, CheckIcon, AnnounceIcon, ICON_SM } from '../lib/icons';
-import { buildResultsCSV, downloadCSV } from '../lib/csv';
+import { buildResultsCSV, buildPlayersCSV, buildRegistrationsCSV, downloadCSV } from '../lib/csv';
 import { lockResults, unlockResults } from '../lib/events';
 import { eventProgress } from '../lib/scoring';
 import { addAudit, updateEvent, updateScorecard, useDB, useEvent, sendEventMessage, useEventMessages } from '../lib/store';
@@ -258,9 +258,6 @@ export default function ConsolePage() {
               Unlock as admin
             </Button>
           )}
-          <Button variant="ghost" onClick={() => downloadCSV(`${event.name || 'event'}-results.csv`, buildResultsCSV(event))}>
-            <DownloadIcon size={ICON_SM} /> Export CSV
-          </Button>
           {event.locked && (
             <Button variant="ghost" to={`/results/${event.id}`}>
               Final results page
@@ -268,6 +265,29 @@ export default function ConsolePage() {
           )}
         </div>
       </Card>
+
+      {/* Exports */}
+      {(() => {
+        const slug = (event.name || 'event').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'event';
+        const regs = db.registrations.filter((r) => r.eventId === event.id);
+        return (
+          <Card padLg style={{ marginBottom: 'var(--space-8)' }}>
+            <h3 style={{ marginBottom: 4 }}>Exports</h3>
+            <p className="text-muted text-small">Download CSVs for your records, the caterer or a mail-merge.</p>
+            <div className="row" style={{ flexWrap: 'wrap', marginTop: 'var(--space-4)' }}>
+              <Button variant="secondary" onClick={() => downloadCSV(`${slug}-players.csv`, buildPlayersCSV(event))}>
+                <DownloadIcon size={ICON_SM} /> Players ({event.players.length})
+              </Button>
+              <Button variant="secondary" onClick={() => downloadCSV(`${slug}-signups.csv`, buildRegistrationsCSV(regs))} disabled={regs.length === 0}>
+                <DownloadIcon size={ICON_SM} /> Sign-ups ({regs.length})
+              </Button>
+              <Button variant="secondary" onClick={() => downloadCSV(`${slug}-results.csv`, buildResultsCSV(event))}>
+                <DownloadIcon size={ICON_SM} /> Scores & results
+              </Button>
+            </div>
+          </Card>
+        );
+      })()}
 
       {/* Team progress */}
       <h3>Team progress</h3>

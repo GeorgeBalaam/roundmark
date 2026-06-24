@@ -1090,6 +1090,17 @@ export function getCurrentUserId(): string | null {
   return currentUserId;
 }
 
+/** Fetch the pre-launch early-access leads (admin only; RLS-gated). */
+export async function fetchEarlyAccessLeads(): Promise<{ email: string; name: string | null; company: string | null; created_at: string }[]> {
+  if (!isSupabaseConfigured || !supabase) return [];
+  const { data, error } = await supabase
+    .from('early_access')
+    .select('email, name, company, created_at')
+    .order('created_at', { ascending: false });
+  if (error || !data) return [];
+  return data as { email: string; name: string | null; company: string | null; created_at: string }[];
+}
+
 /** Current user's role (from the live session). */
 export function useRole(): UserRole | null {
   const db = useDB();
