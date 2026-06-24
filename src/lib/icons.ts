@@ -88,4 +88,8 @@ export {
 
   // Live broadcast announcements
   Megaphone as AnnounceIcon,
+
+  // Card overflow menu + TV
+  MoreHorizontal as MoreIcon,
+  Tv as TvIcon,
 } from 'lucide-react';

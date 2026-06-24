@@ -1,21 +1,26 @@
 // Organiser dashboard: the control centre.
 
-import { useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { DashboardShell } from '../components/shells';
 import {
   Badge,
   Button,
   Card,
+  ConfirmDialog,
   EmptyState,
   EventStatusBadge,
   PageHeader,
   StatCard,
+  TextAreaField,
 } from '../components/ui';
 import { useToast } from '../components/toast-context';
-import { createEvent, duplicateEvent, eventChecklist } from '../lib/events';
+import { createEvent, duplicateEvent, deleteEvent, lockResults, eventChecklist } from '../lib/events';
 import { eventProgress } from '../lib/scoring';
-import { resetDemoData, useIsAdmin, useRole, useVisibleEvents } from '../lib/store';
+import { resetDemoData, updateEvent, sendEventMessage, useIsAdmin, useRole, useVisibleEvents } from '../lib/store';
+import {
+  MoreIcon, PauseIcon, ResumeIcon, AnnounceIcon, LeaderboardIcon, TvIcon, LockIcon, ICON_SM,
+} from '../lib/icons';
 import type { RoundmarkEvent } from '../lib/types';
 import { EVENT_TYPE_LABELS, FORMAT_LABELS } from '../lib/types';
 
@@ -29,13 +34,60 @@ function formatDate(iso: string): string {
   });
 }
 
+interface MenuItem { label: string; to?: string; onClick?: () => void; danger?: boolean }
+
+function CardMenu({ items }: { items: MenuItem[] }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    function onDown(e: MouseEvent) { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); }
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') setOpen(false); }
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey); };
+  }, [open]);
+  return (
+    <div className="card-menu" ref={ref}>
+      <Button size="sm" variant="ghost" aria-label="More actions" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+        <MoreIcon size={ICON_SM} />
+      </Button>
+      {open && (
+        <ul className="card-menu-list" role="menu">
+          {items.map((it) => (
+            <li key={it.label} role="none">
+              {it.to ? (
+                <Link role="menuitem" className="card-menu-item" to={it.to} onClick={() => setOpen(false)}>{it.label}</Link>
+              ) : (
+                <button role="menuitem" type="button" className={`card-menu-item ${it.danger ? 'danger' : ''}`} onClick={() => { setOpen(false); it.onClick?.(); }}>{it.label}</button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function IconControl({ label, icon: Icon, to, onClick }: { label: string; icon: typeof LockIcon; to?: string; onClick?: () => void }) {
+  if (to) {
+    return <Button size="sm" variant="ghost" to={to} aria-label={label} title={label}><Icon size={ICON_SM} /></Button>;
+  }
+  return <Button size="sm" variant="ghost" onClick={onClick} aria-label={label} title={label}><Icon size={ICON_SM} /></Button>;
+}
+
 function EventCard({ event }: { event: RoundmarkEvent }) {
   const navigate = useNavigate();
   const toast = useToast();
   const [dupOpen, setDupOpen] = useState(false);
   const [withPlayers, setWithPlayers] = useState(true);
+  const [confirmLock, setConfirmLock] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [announceOpen, setAnnounceOpen] = useState(false);
+  const [announceText, setAnnounceText] = useState('');
   const progress = eventProgress(event);
   const { ready } = eventChecklist(event);
+  const ended = event.status === 'completed' || event.locked;
 
   function duplicate() {
     const copy = duplicateEvent(event, withPlayers);
@@ -43,94 +95,121 @@ function EventCard({ event }: { event: RoundmarkEvent }) {
     toast('Event duplicated — scores were not copied', 'success');
     navigate(`/app/event/${copy.id}`);
   }
+  function togglePause() {
+    updateEvent(event.id, (e) => { e.scoringPaused = !e.scoringPaused; });
+    toast(event.scoringPaused ? 'Scoring resumed' : 'Scoring paused', 'success');
+  }
+  async function sendAnnounce() {
+    const err = await sendEventMessage(event.id, announceText);
+    if (err) { toast(`Couldn't send: ${err}`, 'error'); return; }
+    setAnnounceText('');
+    setAnnounceOpen(false);
+    toast('Announcement sent to all devices', 'success');
+  }
+
+  // Status-aware primary action.
+  const primary = ended
+    ? { label: 'Results', to: `/results/${event.id}` }
+    : event.status === 'live'
+      ? { label: 'Console', to: `/app/event/${event.id}/console` }
+      : event.status === 'ready'
+        ? { label: 'Open event', to: `/app/event/${event.id}` }
+        : { label: 'Set up', to: `/app/event/${event.id}` };
+
+  const menuItems: MenuItem[] = [
+    { label: 'Event settings', to: `/app/event/${event.id}` },
+    ...(event.status !== 'draft' ? [{ label: 'Leaderboard', to: `/leaderboard/${event.id}` }] : []),
+    ...(event.status === 'live' || ended ? [{ label: 'Support console', to: `/app/event/${event.id}/console` }] : []),
+    { label: 'Duplicate', onClick: () => setDupOpen(true) },
+    { label: 'Delete', danger: true, onClick: () => setConfirmDelete(true) },
+  ];
 
   return (
-    <Card hover>
+    <Card hover className="event-card">
       <div className="row-between" style={{ marginBottom: 'var(--space-3)' }}>
         <EventStatusBadge status={event.status} locked={event.locked} />
         <span className="text-small text-muted">{FORMAT_LABELS[event.format]}</span>
       </div>
       <h3 style={{ marginBottom: 4 }}>{event.name || 'Untitled event'}</h3>
       <p className="text-small text-muted" style={{ marginBottom: 'var(--space-4)' }}>
-        {formatDate(event.date)} · {event.venue || 'Venue TBC'}
+        {formatDate(event.date)}{event.startTime ? ` · ${event.startTime}` : ''} · {event.venue || 'Venue TBC'}
         <br />
         {EVENT_TYPE_LABELS[event.type]}
       </p>
-      <div className="row" style={{ gap: 'var(--space-5)', marginBottom: 'var(--space-5)' }}>
-        <span className="text-small">
-          <strong>{event.players.length}</strong> <span className="text-muted">players</span>
-        </span>
-        <span className="text-small">
-          <strong>{event.teams.length}</strong> <span className="text-muted">teams</span>
-        </span>
+      <div className="row" style={{ gap: 'var(--space-5)', marginBottom: 'var(--space-5)', flexWrap: 'wrap' }}>
+        <span className="text-small"><strong>{event.players.length}</strong> <span className="text-muted">players</span></span>
+        <span className="text-small"><strong>{event.teams.length}</strong> <span className="text-muted">teams</span></span>
         {event.status === 'live' && (
-          <span className="text-small">
-            <strong>
-              {progress.done}/{progress.total}
-            </strong>{' '}
-            <span className="text-muted">holes in</span>
-          </span>
+          <span className="text-small"><strong>{progress.done}/{progress.total}</strong> <span className="text-muted">holes in</span></span>
         )}
+        {event.scoringPaused && event.status === 'live' && <Badge tone="amber">Paused</Badge>}
         {!ready && event.status === 'draft' && <Badge tone="amber">Setup incomplete</Badge>}
       </div>
-      <div className="row" style={{ flexWrap: 'wrap' }}>
-        {event.status === 'completed' || event.locked ? (
-          <>
-            <Button size="sm" to={`/results/${event.id}`}>
-              View results
-            </Button>
-            <Button size="sm" variant="secondary" to={`/app/event/${event.id}/console`}>
-              Console
-            </Button>
-          </>
-        ) : (
-          <>
-            <Button size="sm" to={`/app/event/${event.id}`}>
-              Open event
-            </Button>
-            {(event.status === 'live' || event.status === 'ready') && (
-              <Button size="sm" variant="secondary" to={`/leaderboard/${event.id}`}>
-                Leaderboard
-              </Button>
-            )}
-            {event.status === 'live' && (
-              <Button size="sm" variant="secondary" to={`/app/event/${event.id}/console`}>
-                Console
-              </Button>
-            )}
-          </>
-        )}
-        <Button size="sm" variant="ghost" onClick={() => setDupOpen(true)}>
-          Duplicate
-        </Button>
+
+      <div className="row-between" style={{ gap: 'var(--space-2)' }}>
+        <Button size="sm" to={primary.to}>{primary.label}</Button>
+        <CardMenu items={menuItems} />
       </div>
+
+      {/* Day-of quick controls for a live event. */}
+      {event.status === 'live' && (
+        <div className="card-controls" style={{ marginTop: 'var(--space-3)', paddingTop: 'var(--space-3)', borderTop: '1px solid var(--rm-border-soft)' }}>
+          <IconControl label={event.scoringPaused ? 'Resume scoring' : 'Pause scoring'} icon={event.scoringPaused ? ResumeIcon : PauseIcon} onClick={togglePause} />
+          <IconControl label="Send announcement" icon={AnnounceIcon} onClick={() => setAnnounceOpen(true)} />
+          <IconControl label="Live leaderboard" icon={LeaderboardIcon} to={`/leaderboard/${event.id}`} />
+          <IconControl label="TV mode" icon={TvIcon} to={`/tv/${event.id}`} />
+          <IconControl label="Lock results" icon={LockIcon} onClick={() => setConfirmLock(true)} />
+        </div>
+      )}
 
       {dupOpen && (
         <div className="modal-overlay" role="dialog" aria-modal="true" onClick={() => setDupOpen(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <h3>Duplicate “{event.name}”?</h3>
-            <p className="text-muted">
-              The course, sponsors and branding are copied to a new draft event.
-              Scores are never copied.
-            </p>
+            <p className="text-muted">The course, sponsors and branding are copied to a new draft event. Scores are never copied.</p>
             <label className="row" style={{ marginBottom: 'var(--space-6)', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={withPlayers}
-                onChange={(e) => setWithPlayers(e.target.checked)}
-                style={{ width: 18, height: 18 }}
-              />
+              <input type="checkbox" checked={withPlayers} onChange={(e) => setWithPlayers(e.target.checked)} style={{ width: 18, height: 18 }} />
               Also copy the player list
             </label>
             <div className="row" style={{ justifyContent: 'flex-end' }}>
-              <Button variant="ghost" onClick={() => setDupOpen(false)}>
-                Cancel
-              </Button>
+              <Button variant="ghost" onClick={() => setDupOpen(false)}>Cancel</Button>
               <Button onClick={duplicate}>Duplicate event</Button>
             </div>
           </div>
         </div>
       )}
+
+      {announceOpen && (
+        <div className="modal-overlay" role="dialog" aria-modal="true" onClick={() => setAnnounceOpen(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ marginTop: 0 }}>Send an announcement</h3>
+            <p className="text-muted" style={{ marginTop: 0 }}>Goes to every device connected to <strong>{event.name}</strong>.</p>
+            <TextAreaField label="Message" rows={2} placeholder="e.g. Lunch is served in the clubhouse" value={announceText} onChange={(e) => setAnnounceText(e.target.value)} />
+            <div className="row" style={{ justifyContent: 'flex-end', marginTop: 'var(--space-4)' }}>
+              <Button variant="ghost" onClick={() => setAnnounceOpen(false)}>Cancel</Button>
+              <Button onClick={sendAnnounce} disabled={!announceText.trim()}>Send</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={confirmLock}
+        title="Lock results?"
+        body="This ends scoring and publishes the final results. You can unlock again from the console if needed."
+        confirmLabel="Lock results"
+        onConfirm={() => { lockResults(event.id, 'Organiser'); setConfirmLock(false); toast('Results locked', 'success'); }}
+        onCancel={() => setConfirmLock(false)}
+      />
+      <ConfirmDialog
+        open={confirmDelete}
+        title={`Delete “${event.name || 'this event'}”?`}
+        body="This permanently removes the event and its scores. This can't be undone."
+        confirmLabel="Delete event"
+        danger
+        onConfirm={() => { deleteEvent(event.id); setConfirmDelete(false); toast('Event deleted', 'success'); }}
+        onCancel={() => setConfirmDelete(false)}
+      />
     </Card>
   );
 }

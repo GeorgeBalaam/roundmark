@@ -1145,6 +1145,41 @@ svg.lucide { flex-shrink: 0; vertical-align: -0.125em; }
 .live-announce-close { background: none; border: none; color: #cfe0c4; cursor: pointer; padding: 0; display: inline-flex; flex-shrink: 0; }
 .live-announce-close:hover { color: #fff; }
 
+/* ---------- Dashboard event card: overflow menu + quick controls ---------- */
+
+.card-menu { position: relative; }
+.card-menu-list {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 30;
+  min-width: 180px;
+  padding: 6px;
+  margin: 0;
+  list-style: none;
+  background: var(--rm-card);
+  border: 1px solid var(--rm-border-soft);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-lift);
+}
+.card-menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  border: none;
+  background: none;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: var(--rm-ink);
+  cursor: pointer;
+  text-decoration: none;
+}
+.card-menu-item:hover { background: rgba(141, 178, 89, 0.1); }
+.card-menu-item.danger { color: var(--rm-error); }
+.card-controls { display: flex; gap: 2px; flex-wrap: wrap; }
+
 /* ---------- Event-page builder: schedule editor rows ---------- */
 
 .schedule-rows { display: flex; flex-direction: column; gap: var(--space-4); }
